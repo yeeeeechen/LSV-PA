@@ -81,7 +81,7 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk) {
       if(!Abc_ObjIsPi(pFanin)){
         if(find(v_coneFout.begin(),v_coneFout.end(),pFanin) == v_coneFout.end()){ // new msf of cone
           v_coneFout.push_back(pFanin);
-          printf(" New MSF of Cone - %d: Id = %d, name = %s\n", j, Abc_ObjId(pFanin), Abc_ObjName(pFanin));
+          //printf(" New MSF of Cone - %d: Id = %d, name = %s\n", j, Abc_ObjId(pFanin), Abc_ObjName(pFanin));
         }
       }
     }
@@ -102,7 +102,7 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk) {
           if(pFanin->vFanouts.nSize > 1){ // new msf of cone
             if(find(v_coneFout.begin(),v_coneFout.end(),pFanin)==v_coneFout.end()){
               v_coneFout.push_back(pFanin);
-              printf(" New MSF of Cone - %d: Id = %d, name = %s\n", j, Abc_ObjId(pFanin), Abc_ObjName(pFanin));
+              //printf(" New MSF of Cone - %d: Id = %d, name = %s\n", j, Abc_ObjId(pFanin), Abc_ObjName(pFanin));
             }
           }
           else{ // a node of cone
@@ -116,6 +116,12 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk) {
     }
     v_msfc.push_back(v_node);
   }
+
+
+  for(i=0;i<v_msfc.size();++i){
+  	sort(v_msfc[i].begin(), v_msfc[i].end());
+  }
+  sort(v_msfc.begin(), v_msfc.end());
 
   for(i=0;i<v_msfc.size();++i){
     cout << "MSFC " << i << ":";
