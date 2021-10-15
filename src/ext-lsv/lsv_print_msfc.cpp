@@ -41,11 +41,11 @@ void Lsv_Traverse_MSFC(Abc_Ntk_t* pNtk, Abc_Obj_t* pNode, vector<Abc_Obj_t*> fir
   if (count(multi_id.begin(), multi_id.end(), Abc_ObjId(pNode))) { return; }
   // if all fanin are marked (flag = 1, -1) --> push back into ans_list 
   bool can_add_into_ans = true;
-  Abc_Obj_t* pFanin;
+  Abc_Obj_t* pin;
   int i;
-  Abc_ObjForEachFanin(pNode, pFanin, i)
+  Abc_ObjForEachFanin(pNode, pin, i)
   {
-    if (pFanin->msfc_flag == 0) { can_add_into_ans = false; } /* can keep traversing downward */
+    if (pin->msfc_flag == 0) { can_add_into_ans = false; } /* can keep traversing downward */
   }
   if (can_add_into_ans)
   {
