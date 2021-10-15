@@ -127,16 +127,18 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
       cout << endl;
       // start from PO's fanin --> first round !
       vector<Abc_Obj_t*> first_find_msfc;
-      Lsv_Traverse_MSFC(pNtk, pFanin, first_find_msfc, id_multi_fanout_node);
-      msfc_pair.push_back(first_find_msfc);
-      cout << "kkkkkkkkkkkkkkkkkkkkkk : " << first_find_msfc.size() << endl;
-      // for debugging
-      printf("\n============================================\n");
-      for (int k = 0 ; k < first_find_msfc.size() ; ++k)
+      if (pFanin->msfc_flag != -1)
       {
-        printf("%s ", Abc_ObjName(first_find_msfc[k]));
+        Lsv_Traverse_MSFC(pNtk, pFanin, first_find_msfc, id_multi_fanout_node);
+        msfc_pair.push_back(first_find_msfc);
+        // for debugging
+        printf("\n============================================\n");
+        for (int k = 0 ; k < first_find_msfc.size() ; ++k)
+        {
+          printf("%s ", Abc_ObjName(first_find_msfc[k]));
+        }
+        printf("\n============================================\n");
       }
-      printf("\n============================================\n");
     }
   }
   printf("\n========================================\n");
