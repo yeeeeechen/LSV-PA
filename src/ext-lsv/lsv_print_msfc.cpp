@@ -154,27 +154,18 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
     // mark the root as flag = 1
     multi_fanout_node[i]->msfc_flag = 1;
     // printf("Object Id = %d, name = %s\n", Abc_ObjId(pNode), Abc_ObjName(pNode));
-    // variable
-    Abc_Obj_t* pFanin;
-    int j;
+    vector<Abc_Obj_t*> second_find_msfc;
     // recursively traverse each fanin
-    Abc_ObjForEachFanin(pNode, pFanin, j)
+    Lsv_Traverse_MSFC(pNtk, pNode, second_find_msfc, id_multi_fanout_node);
+    msfc_pair.push_back(second_find_msfc);
+    count += 1;
+    // for debugging
+    printf("\n============================================\n");
+    for (int k = 0 ; k < second_find_msfc.size() ; ++k)
     {
-      // printf("  Fanin-%d: Id = %d, name = %s\n", j, Abc_ObjId(pFanin), Abc_ObjName(pFanin));
-      cout << endl;
-      // start from multi-fanout's fanin --> second round !
-      vector<Abc_Obj_t*> second_find_msfc;
-      Lsv_Traverse_MSFC(pNtk, pFanin, second_find_msfc, id_multi_fanout_node);
-      msfc_pair.push_back(second_find_msfc);
-      count += 1;
-      // for debugging
-      printf("\n============================================\n");
-      for (int k = 0 ; k < second_find_msfc.size() ; ++k)
-      {
-        printf("%s ", Abc_ObjName(second_find_msfc[k]));
-      }
-      printf("\n============================================\n");
+      printf("%s ", Abc_ObjName(second_find_msfc[k]));
     }
+    printf("\n============================================\n");
   }
   printf("\n========================================\n");
   printf("Second round has found %d msfc pair !!!\n", count);
