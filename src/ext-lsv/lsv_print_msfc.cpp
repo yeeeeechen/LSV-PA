@@ -38,7 +38,7 @@ void Lsv_Traverse_MSFC(Abc_Ntk_t* pNtk, Abc_Obj_t* pNode, vector<Abc_Obj_t*> fin
   // if meet PI --> return 
   if (Abc_ObjIsPi(pNode)) { cout << "PI" << endl; pNode->msfc_flag = -1; return; }
   // if meet multi-fanout --> return (count = 1 --> exist)
-  if (count(multi_id.begin(), multi_id.end(), Abc_ObjId(pNode))) { cout << "MULTI" << endl; return; }
+  // if (count(multi_id.begin(), multi_id.end(), Abc_ObjId(pNode))) { cout << "MULTI" << endl; return; }
   // if all fanin are marked (flag = 1, -1) --> push back into ans_list 
   bool can_add_into_ans = true;
   Abc_Obj_t* pin;
