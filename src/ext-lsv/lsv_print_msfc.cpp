@@ -36,19 +36,20 @@ struct PackageRegistrationManager
 void Lsv_Traverse_MSFC(Abc_Ntk_t* pNtk, Abc_Obj_t* pNode, vector<Abc_Obj_t*> find_msfc, vector<int> multi_id)
 {
   // if meet PI --> return 
-  if (Abc_ObjIsPi(pNode)) { cout << "PIIIIIIIIIIIIIIIII" << endl; pNode->msfc_flag = -1; return; }
+  if (Abc_ObjIsPi(pNode)) { cout << "PI" << endl; pNode->msfc_flag = -1; return; }
   // if meet multi-fanout --> return (count = 1 --> exist)
-  if (count(multi_id.begin(), multi_id.end(), Abc_ObjId(pNode))) { cout << "MULTIIIIIIIIIIIIII" << endl; return; }
+  if (count(multi_id.begin(), multi_id.end(), Abc_ObjId(pNode))) { cout << "MULTI" << endl; return; }
   // if all fanin are marked (flag = 1, -1) --> push back into ans_list 
   bool can_add_into_ans = true;
   Abc_Obj_t* pin;
   int i_;
   Abc_ObjForEachFanin(pNode, pin, i_)
   {
-    if (pin->msfc_flag == 0) { can_add_into_ans = false; } /* can keep traversing downward */
+    if (pin->msfc_flag == 0) { cout << "uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu" << endl; can_add_into_ans = false; } /* can keep traversing downward */
   }
   if (can_add_into_ans)
   {
+    cout << "hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh" << endl;
     pNode->msfc_flag = 1; /* marked as traversed */
     find_msfc.push_back(pNode); 
   }
