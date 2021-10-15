@@ -108,7 +108,7 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
       msfc_pair.push_back(first_find_msfc);
     }
   }
-  printf("========================================\n");
+  printf("\n========================================\n");
   printf("First round has found %d msfc pair !!!\n", msfc_pair.size());
   printf("========================================\n");
   // second round ! find msfc from multi-fanout node 
