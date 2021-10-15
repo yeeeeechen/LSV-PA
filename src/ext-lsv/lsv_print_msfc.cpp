@@ -23,7 +23,7 @@ struct PackageRegistrationManager
 // main function
 void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
 {
-  
+  cout << "hhhhhhhhhhhhhhhhhhhhhhhhh" << endl;
 }
 
 
