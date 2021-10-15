@@ -1,6 +1,9 @@
+#include <iostream>
 #include "base/abc/abc.h"
 #include "base/main/main.h"
 #include "base/main/mainInt.h"
+
+using namespace std;
 
 // add new command
 static int LSV_CommandPrintMSFC(Abc_Frame_t* pAbc, int argc, char** argv);
