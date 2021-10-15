@@ -164,11 +164,10 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
   for (int i = 0 ; i < multi_fanout_node.size() ; ++i)
   {
     Abc_Obj_t* pNode = multi_fanout_node[i];
-    // mark the root as flag = 1
-    multi_fanout_node[i]->msfc_flag = 1;
+    // mark the root as flag = 0
+    multi_fanout_node[i]->msfc_flag = 0;
     // printf("Object Id = %d, name = %s\n", Abc_ObjId(pNode), Abc_ObjName(pNode));
     vector<Abc_Obj_t*> second_find_msfc;
-    second_find_msfc.push_back(multi_fanout_node[i]);
     // recursively traverse each fanin
     Lsv_Traverse_MSFC(pNtk, pNode, second_find_msfc, id_multi_fanout_node);
     msfc_pair.push_back(second_find_msfc);
@@ -178,7 +177,6 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
     printf("\n============================================\n");
     for (int k = 0 ; k < second_find_msfc.size() ; ++k)
     {
-      cout << "oooooooooooooooooooooooooooooo" << endl;
       printf("%s ", Abc_ObjName(second_find_msfc[k]));
     }
     printf("\n============================================\n");
