@@ -158,7 +158,7 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
   }
   printf("\n========================================\n");
   printf("First round has found %d msfc pair !!!\n", msfc_pair.size());
-  printf("========================================\n");
+  printf("========================================\n\n");
   // second round ! find msfc from multi-fanout node 
   int count = 0;
   for (int i = 0 ; i < multi_fanout_node.size() ; ++i)
@@ -183,7 +183,7 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
   }
   printf("\n========================================\n");
   printf("Second round has found %d msfc pair !!!\n", count);
-  printf("========================================\n");
+  printf("========================================\n\n");
 
   // sort and output (print)
 
