@@ -79,8 +79,12 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
   // default each node with flag=0 && find whether has "multi-fanout"
   Abc_Obj_t* pObj;
   int node;
+  printf("\n=============\n");
+  printf("Total node...");
+  printf("\n=============\n");
   Abc_NtkForEachNode(pNtk, pObj, node) 
   {
+    printf("%s ", Abc_ObjName(pObj));
     pObj->msfc_flag = 0;
     // multi-fanout && not (PI / PO)
     if ((!Abc_ObjIsPi(pObj)) && (!Abc_ObjIsPo(pObj)) && (sizeof(pObj->vFanouts) > 1)) 
@@ -126,12 +130,12 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
       Lsv_Traverse_MSFC(pNtk, pFanin, first_find_msfc, id_multi_fanout_node);
       msfc_pair.push_back(first_find_msfc);
       // for debugging
-      printf("\n============================================\n")
+      printf("\n============================================\n");
       for (int k = 0 ; k < first_find_msfc.size() ; ++k)
       {
-        printf("%s ", Abc_ObjName(first_find_msfc[k]))
+        printf("%s ", Abc_ObjName(first_find_msfc[k]));
       }
-      printf("\n============================================\n")
+      printf("\n============================================\n");
     }
   }
   printf("\n========================================\n");
@@ -159,12 +163,12 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
       msfc_pair.push_back(second_find_msfc);
       count += 1;
       // for debugging
-      printf("\n============================================\n")
+      printf("\n============================================\n");
       for (int k = 0 ; k < second_find_msfc.size() ; ++k)
       {
-        printf("%s ", Abc_ObjName(second_find_msfc[k]))
+        printf("%s ", Abc_ObjName(second_find_msfc[k]));
       }
-      printf("\n============================================\n")
+      printf("\n============================================\n");
     }
   }
   printf("\n========================================\n");
