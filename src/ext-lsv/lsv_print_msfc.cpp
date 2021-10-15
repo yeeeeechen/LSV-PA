@@ -78,13 +78,14 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
   vector<int>         id_multi_fanout_node; /* id of the above */
   // default each node with flag=0 && find whether has "multi-fanout"
   Abc_Obj_t* pObj;
-  int node;
+  int node, count_node=0;
   printf("\n=============\n");
   printf("Total node...");
   printf("\n=============\n");
   Abc_NtkForEachNode(pNtk, pObj, node) 
   {
     printf("%s ", Abc_ObjName(pObj));
+    ++count_node;
     pObj->msfc_flag = 0;
     // multi-fanout && not (PI / PO)
     if ((!Abc_ObjIsPi(pObj)) && (!Abc_ObjIsPo(pObj)) && (sizeof(pObj->vFanouts) > 1)) 
@@ -110,6 +111,7 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
     }
   }
   printf("\n\n===================================\n");
+  printf("There are %d node !!!\n", count_node);
   printf("There are %d multi-fanout node !!!\n", multi_fanout_node.size());
   printf("===================================\n");
 
