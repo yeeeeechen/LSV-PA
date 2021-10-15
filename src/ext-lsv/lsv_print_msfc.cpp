@@ -49,9 +49,9 @@ void Lsv_Traverse_MSFC(Abc_Ntk_t* pNtk, Abc_Obj_t* pNode, vector<Abc_Obj_t*> fin
   }
   if (can_add_into_ans)
   {
-    cout << "hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh" << endl;
     pNode->msfc_flag = 1; /* marked as traversed */
     find_msfc.push_back(pNode); 
+    cout << "hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh : " << Abc_ObjName(pNode) << endl;
   }
   // variable
   Abc_Obj_t* pFanin;
