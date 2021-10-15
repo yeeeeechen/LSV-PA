@@ -22,16 +22,25 @@ struct PackageRegistrationManager
   PackageRegistrationManager() { Abc_FrameAddInitializer(&frame_initializer); }
 } lsvPackageRegistrationManager;
 
+// some useful function
+// abc.h --> Abc_ObjIsPi(pObj), Abc_ObjIsPo(pObj)
+// abc.h --> Abc_ObjForEachFanin(), Abc_ObjForEachFanout()
+// abc.h --> Abc_NtkForEachPi(), Abc_NtkForEachPo()
 
 // main function
 void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
 {
+  cout << "==================================" << endl;
   cout << "HELLO! ENTER Lsv_NtkPrintMSFC()..." << endl;
-  Abc_Obj_t* pObj;
+  cout << "==================================" << endl;
+  cout << endl;
+  // global variable
+  Abc_Obj_t* PO;
   int i;
-  Abc_NtkForEachNode(pNtk, pObj, i)
+  vector<vector<int>> msfc_pair;
+  Abc_NtkForEachPo(pNtk, PO, i)
   {
-    printf("Object Id = %d, name = %s\n", Abc_ObjId(pObj), Abc_ObjName(pObj));
+    printf("Object Id = %d, name = %s\n", Abc_ObjId(PO), Abc_ObjName(PO));
   }
 
 }
