@@ -33,7 +33,7 @@ struct PackageRegistrationManager
 // abc.h --> struct Abc_Obj_t_ --> add "bool msfc_flag"
 
 // traverse function
-void Lsv_Traverse_MSFC(Abc_Ntk_t* pNtk, Abc_Obj_t* pNode, vector<Abc_Obj_t*> find_msfc, vector<int> multi_id)
+void Lsv_Traverse_MSFC(Abc_Ntk_t* pNtk, Abc_Obj_t* pNode, vector<Abc_Obj_t*>& find_msfc, vector<int> multi_id)
 {
   // if meet PI --> return 
   if (Abc_ObjIsPi(pNode)) { cout << "PI" << endl; pNode->msfc_flag = -1; return; }
@@ -164,10 +164,11 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
   for (int i = 0 ; i < multi_fanout_node.size() ; ++i)
   {
     Abc_Obj_t* pNode = multi_fanout_node[i];
-    // mark the root as flag = 0
-    multi_fanout_node[i]->msfc_flag = 0;
+    // mark the root as flag = 1
+    multi_fanout_node[i]->msfc_flag = 1;
     // printf("Object Id = %d, name = %s\n", Abc_ObjId(pNode), Abc_ObjName(pNode));
     vector<Abc_Obj_t*> second_find_msfc;
+    second_find_msfc.push_back(multi_fanout_node[i]);
     // recursively traverse each fanin
     Lsv_Traverse_MSFC(pNtk, pNode, second_find_msfc, id_multi_fanout_node);
     msfc_pair.push_back(second_find_msfc);
