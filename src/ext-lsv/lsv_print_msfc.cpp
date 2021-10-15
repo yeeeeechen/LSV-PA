@@ -164,6 +164,7 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
     printf("\n============================================\n");
     for (int k = 0 ; k < second_find_msfc.size() ; ++k)
     {
+      cout << "oooooooooooooooooooooooooooooo" << endl;
       printf("%s ", Abc_ObjName(second_find_msfc[k]));
     }
     printf("\n============================================\n");
