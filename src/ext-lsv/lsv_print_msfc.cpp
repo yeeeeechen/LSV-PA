@@ -26,7 +26,14 @@ struct PackageRegistrationManager
 // main function
 void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
 {
-  cout << "hhhhhhhhhhhhhhhhhhhhhhhhh" << endl;
+  cout << "HELLO! ENTER Lsv_NtkPrintMSFC()..." << endl;
+  Abc_Obj_t* pObj;
+  int i;
+  Abc_NtkForEachNode(pNtk, pObj, i)
+  {
+    printf("Object Id = %d, name = %s\n", Abc_ObjId(pObj), Abc_ObjName(pObj));
+  }
+
 }
 
 
