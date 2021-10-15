@@ -85,7 +85,17 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
     // multi-fanout && not (PI / PO)
     if ((!Abc_ObjIsPi(pObj)) && (!Abc_ObjIsPo(pObj)) && (sizeof(pObj->vFanouts) > 1)) 
     {
-      cout << "hhhhhhhhhhhhhhhhh : " << pObj->vFanouts[0] << endl;
+      // variable
+      Abc_Obj_t* pFanin;
+      int j;
+      int count = 0;
+      // recursively traverse each fanin
+      Abc_ObjForEachFanin(pObj, pFanin, j)
+      {
+        cout << "hhhhhhhhhhhhhhhhhh : " << count << endl;
+        cout << Abc_ObjName(pFanin) << endl;
+        count++;
+      }
       pObj->msfc_flag = -1;
       multi_fanout_node.push_back(pObj);
       id_multi_fanout_node.push_back(Abc_ObjId(pObj));
