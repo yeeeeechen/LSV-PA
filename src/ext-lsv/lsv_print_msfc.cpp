@@ -129,6 +129,7 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
       vector<Abc_Obj_t*> first_find_msfc;
       Lsv_Traverse_MSFC(pNtk, pFanin, first_find_msfc, id_multi_fanout_node);
       msfc_pair.push_back(first_find_msfc);
+      cout << "kkkkkkkkkkkkkkkkkkkkkk : " << first_find_msfc.size() << endl;
       // for debugging
       printf("\n============================================\n");
       for (int k = 0 ; k < first_find_msfc.size() ; ++k)
