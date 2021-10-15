@@ -36,9 +36,9 @@ struct PackageRegistrationManager
 void Lsv_Traverse_MSFC(Abc_Ntk_t* pNtk, Abc_Obj_t* pNode, vector<Abc_Obj_t*> find_msfc, vector<int> multi_id)
 {
   // if meet PI --> return 
-  if (Abc_ObjIsPi(pNode)) { pNode->msfc_flag = -1; return; }
+  if (Abc_ObjIsPi(pNode)) { cout << "PIIIIIIIIIIIIIIIII" << endl; pNode->msfc_flag = -1; return; }
   // if meet multi-fanout --> return (count = 1 --> exist)
-  if (count(multi_id.begin(), multi_id.end(), Abc_ObjId(pNode))) { return; }
+  if (count(multi_id.begin(), multi_id.end(), Abc_ObjId(pNode))) { cout << "MULTIIIIIIIIIIIIII" << endl; return; }
   // if all fanin are marked (flag = 1, -1) --> push back into ans_list 
   bool can_add_into_ans = true;
   Abc_Obj_t* pin;
@@ -109,7 +109,7 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
       id_multi_fanout_node.push_back(Abc_ObjId(pObj));
     }
   }
-  printf("\n===================================\n");
+  printf("\n\n===================================\n");
   printf("There are %d multi-fanout node !!!\n", multi_fanout_node.size());
   printf("===================================\n");
 
