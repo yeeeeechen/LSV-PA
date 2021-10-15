@@ -149,7 +149,7 @@ struct Abc_Obj_t_     // 48/72 bytes (32-bits/64-bits)
       int             iTemp;
       float           dTemp; };
     // Hugo: 2021.10.15 --> PA1
-    bool              msfc_flag;     // default=0, traverse=1, (PI or multi-fanout)=-1
+    int               msfc_flag;     // default=0, traverse=1, (PI or multi-fanout)=-1
 };
 
 struct Abc_Ntk_t_ 
