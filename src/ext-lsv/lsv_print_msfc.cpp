@@ -58,7 +58,7 @@ void Lsv_Traverse_MSFC(Abc_Ntk_t* pNtk, Abc_Obj_t* pNode, vector<Abc_Obj_t*> fir
   // recursively traverse each fanin
   Abc_ObjForEachFanin(pNode, pFanin, i)
   {
-    Lsv_Traverse_MSFC(pNtk, pFanin, first_find_msfc, id_multi_fanout_node);
+    Lsv_Traverse_MSFC(pNtk, pFanin, first_find_msfc, multi_id);
   }
 
 }
