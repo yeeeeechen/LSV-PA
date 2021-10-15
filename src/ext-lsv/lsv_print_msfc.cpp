@@ -90,7 +90,7 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
       id_multi_fanout_node.push_back(Abc_ObjId(pObj));
     }
   }
-  printf("\n=================================\n");
+  printf("\n===================================\n");
   printf("There are %d multi-fanout node !!!\n", multi_fanout_node.size());
   printf("===================================\n");
 
@@ -112,7 +112,7 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
       msfc_pair.push_back(first_find_msfc);
     }
   }
-  printf("\n======================================\n");
+  printf("\n========================================\n");
   printf("First round has found %d msfc pair !!!\n", msfc_pair.size());
   printf("========================================\n");
   // second round ! find msfc from multi-fanout node 
@@ -138,7 +138,7 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
       count += 1;
     }
   }
-  printf("\n======================================\n");
+  printf("\n========================================\n");
   printf("Second round has found %d msfc pair !!!\n", count);
   printf("========================================\n");
 
