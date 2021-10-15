@@ -94,7 +94,6 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
   Abc_NtkForEachPo(pNtk, PO, i)
   {
     printf("Object Id = %d, name = %s\n", Abc_ObjId(PO), Abc_ObjName(PO));
-    cout << endl;
     // variable
     Abc_Obj_t* pFanin;
     int j;
@@ -102,6 +101,7 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
     Abc_ObjForEachFanin(PO, pFanin, j)
     {
       printf("  Fanin-%d: Id = %d, name = %s\n", j, Abc_ObjId(pFanin), Abc_ObjName(pFanin));
+      cout << endl;
       // start from PO's fanin --> first round !
       vector<Abc_Obj_t*> first_find_msfc;
       Lsv_Traverse_MSFC(pNtk, pFanin, first_find_msfc, id_multi_fanout_node);
