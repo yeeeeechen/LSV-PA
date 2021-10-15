@@ -38,21 +38,33 @@ void Lsv_Traverse_MSFC(Abc_Ntk_t* pNtk, Abc_Obj_t* pNode, vector<Abc_Obj_t*> fin
   // if meet PI --> return 
   if (Abc_ObjIsPi(pNode)) { cout << "PI" << endl; pNode->msfc_flag = -1; return; }
   // if meet multi-fanout --> return (count = 1 --> exist)
+  if (pNode->msfc_flag == -1) { cout << "MULTI" << endl; return; }
   // if (count(multi_id.begin(), multi_id.end(), Abc_ObjId(pNode))) { cout << "MULTI" << endl; return; }
-  // if all fanin are marked (flag = 1, -1) --> push back into ans_list 
-  bool can_add_into_ans = true;
-  Abc_Obj_t* pin;
-  int i_;
-  Abc_ObjForEachFanin(pNode, pin, i_)
+  if (pNode->msfc_flag == 0)
   {
-    if (pin->msfc_flag == 0) { cout << "uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu" << endl; can_add_into_ans = false; } /* can keep traversing downward */
-  }
-  if (can_add_into_ans)
-  {
-    pNode->msfc_flag = 1; /* marked as traversed */
+    cout << "hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh" << endl;
+    pNode->msfc_flag = 1; // marked as traversed 
     find_msfc.push_back(pNode); 
-    cout << "hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh : " << Abc_ObjName(pNode) << endl;
   }
+  // if all fanin are marked (flag = 1, -1) --> push back into ans_list 
+    /*
+      bool can_add_into_ans = true;
+      Abc_Obj_t* pin;
+      int i_;
+      Abc_ObjForEachFanin(pNode, pin, i_)
+      {
+        if (pin->msfc_flag == 0) // can keep traversing downward 
+        { 
+          cout << "uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu" << endl; can_add_into_ans = false; 
+        } 
+      }
+      if (can_add_into_ans)
+      {
+        pNode->msfc_flag = 1; // marked as traversed 
+        find_msfc.push_back(pNode); 
+        cout << "hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh : " << Abc_ObjName(pNode) << endl;
+      }
+    */
   // variable
   Abc_Obj_t* pFanin;
   int i;
@@ -152,8 +164,8 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
   for (int i = 0 ; i < multi_fanout_node.size() ; ++i)
   {
     Abc_Obj_t* pNode = multi_fanout_node[i];
-    // mark the root as flag = 1
-    multi_fanout_node[i]->msfc_flag = 1;
+    // mark the root as flag = 0
+    multi_fanout_node[i]->msfc_flag = 0;
     // printf("Object Id = %d, name = %s\n", Abc_ObjId(pNode), Abc_ObjName(pNode));
     vector<Abc_Obj_t*> second_find_msfc;
     // recursively traverse each fanin
