@@ -161,6 +161,7 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
     msfc_pair.push_back(second_find_msfc);
     count += 1;
     // for debugging
+    cout << second_find_msfc.size() << endl;
     printf("\n============================================\n");
     for (int k = 0 ; k < second_find_msfc.size() ; ++k)
     {
