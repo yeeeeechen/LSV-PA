@@ -15,7 +15,7 @@ void init(Abc_Frame_t* pAbc)
 
 void destroy(Abc_Frame_t* pAbc) {}
 
-Abc_FramInitializer_t frame_initializer = { init, destroy };
+Abc_FrameInitializer_t frame_initializer = { init, destroy };
 
 struct PackageRegistrationManager
 {
