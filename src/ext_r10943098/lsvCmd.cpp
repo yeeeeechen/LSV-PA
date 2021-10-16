@@ -48,18 +48,21 @@ void Lsv_NtkMSFC(Abc_Ntk_t* pNtk) {
     queue<Abc_Obj_t*> root;
     set<set<Abc_Obj_t*, obj_comparator>*, obj_set_comparator> msfc_list;
     set<Abc_Obj_t*> traversed;
-    Abc_NtkForEachPo( pNtk, pPo, i )
+    Abc_NtkForEachNode( pNtk, pPo, i ) 
     {
-        Abc_Obj_t* pFanin;
-        int j;
-        Abc_ObjForEachFanin( pPo, pFanin, j )
-        {
-            if(traversed.find(pFanin)==traversed.end())
-            {
-				root.push(pFanin);
-				traversed.insert(pFanin);
-            }
-        } 
+		if(!Abc_ObjIsPi(pPo)&&!Abc_ObjIsPo(pPo))
+		{
+			if((Abc_ObjFanoutNum(pPo) >1)||(Abc_ObjFanoutNum(pPo) == 0))
+			{
+				root.push(pPo);
+				traversed.insert(pPo);
+			}
+			else if(Abc_ObjIsPo(Abc_ObjFanout0(pPo)))
+			{				
+				root.push(pPo);
+				traversed.insert(pPo);
+			}
+		}
     }
 	while(root.size() > 0)
 	{
@@ -75,16 +78,12 @@ void Lsv_NtkMSFC(Abc_Ntk_t* pNtk) {
 			track.pop();
 			Abc_ObjForEachFanin(current_node, pFanin, k)
 			{
-				if(traversed.find(pFanin)==traversed.end())
+				if((traversed.find(pFanin)==traversed.end())&&(Abc_ObjIsNode(pFanin)))
 				{
 					traversed.insert(pFanin);
 					if(!Abc_ObjIsPi(pFanin))
 					{
-						if(Abc_ObjFanoutNum(pFanin) > 1)
-						{
-							root.push(pFanin);
-						}
-						else
+						if(Abc_ObjFanoutNum(pFanin) == 1)
 						{
 							track_list->insert(pFanin);
 							track.push(pFanin);
@@ -99,14 +98,24 @@ void Lsv_NtkMSFC(Abc_Ntk_t* pNtk) {
 	int counter = 0;
 	for(auto x=msfc_list.begin(); x!=msfc_list.end(); ++x)
 	{
-		cout << "MSFC " << counter << ": "; 
+		cout << "MSFC " << counter << ": ";
+		int counter_2 = (*x)->size(); 
 		for(auto y=(*x)->begin(); y!=(*x)->end(); ++y)
 		{
-			cout << Abc_ObjName((*y)) << ", ";
+			if(counter_2 != 1)
+			{
+				cout << Abc_ObjName((*y)) << ",";
+			}
+			else
+			{
+				cout << Abc_ObjName((*y));
+			}
+			counter_2--;
 		}
 		cout << endl;
 		counter++;
-	} 
+	}
+
 }
 
 int Lsv_CommandMSFC(Abc_Frame_t* pAbc, int argc, char** argv) {
