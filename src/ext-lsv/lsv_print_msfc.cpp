@@ -31,8 +31,8 @@ struct PackageRegistrationManager
 // abc.h --> Abc_ObjForEachFanin(), Abc_ObjForEachFanout()
 // abc.h --> Abc_NtkForEachPi(), Abc_NtkForEachPo()
 
-// ** modify abc **
-// abc.h --> struct Abc_Obj_t_ --> add "int msfc_flag" --> default=0, traverse=1, (PI or multi-fanout)=-1
+// ** msfc flag **
+// default = 0, traverse = 1, (PI or multi-fanout) = -1
 
 // unordered map --> <name, flag>
 unordered_map<string, int> msfc_flag;
@@ -41,55 +41,25 @@ unordered_map<string, int> msfc_flag;
 void Lsv_Traverse_MSFC(Abc_Ntk_t* pNtk, Abc_Obj_t* pNode, vector<Abc_Obj_t*>& find_msfc, vector<int>& multi_id, vector<string>& PO_node)
 {
   // if meet PI --> return (no PI)
-  if (Abc_ObjIsPi(pNode)) { cout << "PI" << endl; msfc_flag[Abc_ObjName(pNode)] = -1; return; }
+  if (Abc_ObjIsPi(pNode)) { msfc_flag[Abc_ObjName(pNode)] = -1; return; }
   // if meet multi-fanout --> return (count = 1 --> exist)
-  if (msfc_flag[Abc_ObjName(pNode)] == -1) { cout << "MULTI" << endl; return; }
-  // if (count(multi_id.begin(), multi_id.end(), Abc_ObjId(pNode))) { cout << "MULTI" << endl; return; }
+  if (msfc_flag[Abc_ObjName(pNode)] == -1) { return; }
   if (msfc_flag[Abc_ObjName(pNode)] == 0)
   {
-    cout << "hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh : " << Abc_ObjName(pNode) << " --> " << msfc_flag[Abc_ObjName(pNode)] << endl;
     msfc_flag[Abc_ObjName(pNode)] = 1; // marked as traversed 
-    // Do not push back PO
     find_msfc.push_back(pNode);
-    // if (!count(PO_node.begin(), PO_node.end(), Abc_ObjName(pNode))) { find_msfc.push_back(pNode); } 
   }
-  // if all fanin are marked (flag = 1, -1) --> push back into ans_list 
-    /*
-      bool can_add_into_ans = true;
-      Abc_Obj_t* pin;
-      int i_;
-      Abc_ObjForEachFanin(pNode, pin, i_)
-      {
-        if (msfc_flag[Abc_ObjName(pin)] == 0) // can keep traversing downward 
-        { 
-          cout << "uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu" << endl; can_add_into_ans = false; 
-        } 
-      }
-      if (can_add_into_ans)
-      {
-        msfc_flag[Abc_ObjName(pNode)] = 1; // marked as traversed 
-        find_msfc.push_back(pNode); 
-        cout << "hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh : " << Abc_ObjName(pNode) << endl;
-      }
-    */
   // variable
   Abc_Obj_t* pFanin;
   int i;
   // recursively traverse each fanin
-  Abc_ObjForEachFanin(pNode, pFanin, i)
-  {
-    Lsv_Traverse_MSFC(pNtk, pFanin, find_msfc, multi_id, PO_node);
-  }
+  Abc_ObjForEachFanin(pNode, pFanin, i) { Lsv_Traverse_MSFC(pNtk, pFanin, find_msfc, multi_id, PO_node); }
 
 }
 
 // main function
 void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
 {
-  cout << "==================================" << endl;
-  cout << "HELLO! ENTER Lsv_NtkPrintMSFC()..." << endl;
-  cout << "==================================" << endl;
-  cout << endl;
   // global variable
   Abc_Obj_t* PO;
   int i;
@@ -101,57 +71,29 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
   // default each node with flag=0 && find whether has "multi-fanout"
   Abc_Obj_t* pObj;
   int node, count_node=0;
-  printf("\n=============\n");
-  printf("Total node...");
-  printf("\n=============\n");
   Abc_NtkForEachNode(pNtk, pObj, node) 
   {
-    printf("%s ", Abc_ObjName(pObj));
     ++count_node;
     msfc_flag[Abc_ObjName(pObj)] = 0;
     // multi-fanout && not (PI / PO)
     if ((Abc_ObjFanoutNum(pObj) > 1)) 
     {
-      // for debugging
-      // variable
-      Abc_Obj_t* pFanout;
-      int j;
-      int count = 0;
-      cout << "\njkjkjkjkjkjkjkjk : " << Abc_ObjFanoutNum(pObj) << endl;
-      // recursively traverse each fanin
-      Abc_ObjForEachFanout(pObj, pFanout, j)
-      {
-        cout << "hhhhhhhhhhhhhhhhhh : " << count << endl;
-        cout << Abc_ObjName(pFanout) << endl;
-        count++;
-      }
-      //
-      //
       msfc_flag[Abc_ObjName(pObj)] = -1;
       multi_fanout_node.push_back(pObj);
       id_multi_fanout_node.push_back(Abc_ObjId(pObj));
     }
   }
-  printf("\n\n===================================\n");
-  printf("There are %d node !!!\n", count_node);
-  printf("There are %d multi-fanout node !!!\n", multi_fanout_node.size());
-  printf("===================================\n");
 
   // check for each PO
   Abc_NtkForEachPo(pNtk, PO, i)
   {
-    // printf("Object Id = %d, name = %s\n", Abc_ObjId(PO), Abc_ObjName(PO));
-    // msfc_flag[Abc_ObjName(PO)] = -1;
     // variable
-    cout << "kkkkkkkkkkkkkkkkkkkkkkkkkk : " << Abc_ObjName(PO) << " --> " << msfc_flag[Abc_ObjName(PO)] << endl;
     PO_node.push_back(Abc_ObjName(PO));
     Abc_Obj_t* pFanin;
     int j;
     // recursively traverse each fanin
     Abc_ObjForEachFanin(PO, pFanin, j)
     {
-      // printf("  Fanin-%d: Id = %d, name = %s\n", j, Abc_ObjId(pFanin), Abc_ObjName(pFanin));
-      cout << endl;
       // start from PO's fanin --> first round !
       vector<Abc_Obj_t*> first_find_msfc;
       if (msfc_flag[Abc_ObjName(pFanin)] != -1)
@@ -174,19 +116,9 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
         }
         msfc_min_id.push_back(Abc_ObjId(sorted_first_msfc[0]));
         msfc_pair.push_back(sorted_first_msfc);
-        // for debugging
-        printf("\n============================================\n");
-        for (int k = 0 ; k < sorted_first_msfc.size() ; ++k)
-        {
-          printf("%s (id = %d) ", Abc_ObjName(sorted_first_msfc[k]), Abc_ObjId(sorted_first_msfc[k]));
-        }
-        printf("\n============================================\n");
       }
     }
   }
-  printf("\n========================================\n");
-  printf("First round has found %d msfc pair !!!\n", msfc_pair.size());
-  printf("========================================\n\n");
   // second round ! find msfc from multi-fanout node 
   int count = 0;
   for (int i = 0 ; i < multi_fanout_node.size() ; ++i)
@@ -194,7 +126,6 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
     Abc_Obj_t* pNode = multi_fanout_node[i];
     // mark the root as flag = 0
     msfc_flag[Abc_ObjName(multi_fanout_node[i])] = 0;
-    // printf("Object Id = %d, name = %s\n", Abc_ObjId(pNode), Abc_ObjName(pNode));
     vector<Abc_Obj_t*> second_find_msfc;
     // recursively traverse each fanin
     Lsv_Traverse_MSFC(pNtk, pNode, second_find_msfc, id_multi_fanout_node, PO_node);
@@ -216,18 +147,7 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
     }
     msfc_min_id.push_back(Abc_ObjId(sorted_second_msfc[0]));
     msfc_pair.push_back(sorted_second_msfc);
-    // for debugging
-    cout << second_find_msfc.size() << endl;
-    printf("\n============================================\n");
-    for (int k = 0 ; k < sorted_second_msfc.size() ; ++k)
-    {
-      printf("%s (id = %d) ", Abc_ObjName(sorted_second_msfc[k]), Abc_ObjId(sorted_second_msfc[k]));
-    }
-    printf("\n============================================\n");
   }
-  printf("\n========================================\n");
-  printf("Second round has found %d msfc pair !!!\n", count);
-  printf("========================================\n\n");
 
   // sort 
   sort(msfc_min_id.begin(), msfc_min_id.end());
@@ -241,9 +161,6 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
   }
 
   // output (print)
-  printf("\n===============\n");
-  printf("Final Answer...");
-  printf("\n===============\n");
   int count_ans = 0;
   for (int k = 0 ; k < final_ans.size() ; ++k)
   {
@@ -257,7 +174,6 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
     }
     ++count_ans;
   }
-  printf("\n");
 
 }
 
