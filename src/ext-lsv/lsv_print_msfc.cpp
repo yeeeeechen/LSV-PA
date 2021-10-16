@@ -148,7 +148,7 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
     // recursively traverse each fanin
     Abc_ObjForEachFanin(PO, pFanin, j)
     {
-      printf("uuuuuuuuuuuuuuuuuuuuuuuu  Fanin-%d: Id = %d, name = %s\n", j, Abc_ObjId(pFanin), Abc_ObjName(pFanin));
+      // printf("  Fanin-%d: Id = %d, name = %s\n", j, Abc_ObjId(pFanin), Abc_ObjName(pFanin));
       cout << endl;
       // start from PO's fanin --> first round !
       vector<Abc_Obj_t*> first_find_msfc;
