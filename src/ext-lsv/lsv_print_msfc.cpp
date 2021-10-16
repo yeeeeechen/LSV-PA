@@ -46,7 +46,7 @@ void Lsv_Traverse_MSFC(Abc_Ntk_t* pNtk, Abc_Obj_t* pNode, vector<Abc_Obj_t*>& fi
   // if (count(multi_id.begin(), multi_id.end(), Abc_ObjId(pNode))) { cout << "MULTI" << endl; return; }
   if (msfc_flag[Abc_ObjId(pNode)] == 0)
   {
-    cout << "hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh" << endl;
+    cout << "hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh : " << Abc_ObjName(pNode) << endl;
     msfc_flag[Abc_ObjId(pNode)] = 1; // marked as traversed 
     find_msfc.push_back(pNode); 
   }
@@ -140,7 +140,6 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
     cout << "kkkkkkkkkkkkkkkkkkkkkkkkkk : " << Abc_ObjName(PO) << endl;
     Abc_Obj_t* pFanin;
     int j;
-    msfc_flag[Abc_ObjId(PO)] = -1;
     // recursively traverse each fanin
     Abc_ObjForEachFanin(PO, pFanin, j)
     {
