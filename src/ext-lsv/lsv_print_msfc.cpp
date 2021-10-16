@@ -137,6 +137,7 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
   {
     // printf("Object Id = %d, name = %s\n", Abc_ObjId(PO), Abc_ObjName(PO));
     // variable
+    cout << "kkkkkkkkkkkkkkkkkkkkkkkkkk : " << Abc_ObjName(PO) << endl;
     Abc_Obj_t* pFanin;
     int j;
     // recursively traverse each fanin
