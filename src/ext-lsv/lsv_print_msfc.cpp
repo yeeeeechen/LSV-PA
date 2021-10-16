@@ -140,6 +140,7 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
     cout << "kkkkkkkkkkkkkkkkkkkkkkkkkk : " << Abc_ObjName(PO) << endl;
     Abc_Obj_t* pFanin;
     int j;
+    msfc_flag[Abc_ObjId(PO)] = -1;
     // recursively traverse each fanin
     Abc_ObjForEachFanin(PO, pFanin, j)
     {
