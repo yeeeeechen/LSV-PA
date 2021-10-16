@@ -136,6 +136,7 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
   Abc_NtkForEachPo(pNtk, PO, i)
   {
     // printf("Object Id = %d, name = %s\n", Abc_ObjId(PO), Abc_ObjName(PO));
+    msfc_flag[Abc_ObjId(PO)] = -1;
     // variable
     cout << "kkkkkkkkkkkkkkkkkkkkkkkkkk : " << Abc_ObjName(PO) << endl;
     Abc_Obj_t* pFanin;
