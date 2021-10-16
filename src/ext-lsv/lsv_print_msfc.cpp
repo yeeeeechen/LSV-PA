@@ -166,7 +166,7 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
         sort(temp_first_msfc.begin(), temp_first_msfc.end());
         for (int k = 0 ; k < temp_first_msfc.size() ; ++k)
         {
-          for (int l = 0 ; l < first_find_msfc.size() ; ++k)
+          for (int l = 0 ; l < first_find_msfc.size() ; ++l)
           {
             if (Abc_ObjId(first_find_msfc[l]) == temp_first_msfc[k]) { sorted_first_msfc.push_back(first_find_msfc[l]); }
           }
@@ -207,7 +207,7 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
     sort(temp_second_msfc.begin(), temp_second_msfc.end());
     for (int k = 0 ; k < temp_second_msfc.size() ; ++k)
     {
-      for (int l = 0 ; l < second_find_msfc.size() ; ++k)
+      for (int l = 0 ; l < second_find_msfc.size() ; ++l)
       {
         if (Abc_ObjId(second_find_msfc[l]) == temp_second_msfc[k]) { sorted_second_msfc.push_back(second_find_msfc[l]); }
       }
