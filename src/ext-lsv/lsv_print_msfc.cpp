@@ -95,6 +95,7 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
   vector<vector<Abc_Obj_t*>> msfc_pair;
   vector<Abc_Obj_t*>  multi_fanout_node; /* temp store those have multi fanout's gate */
   vector<string>      PO_node;
+  vector<int>         msfc_min_id;
   vector<int>         id_multi_fanout_node; /* id of the above */
   // default each node with flag=0 && find whether has "multi-fanout"
   Abc_Obj_t* pObj;
@@ -155,7 +156,6 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
       if (msfc_flag[Abc_ObjName(pFanin)] != -1)
       {
         Lsv_Traverse_MSFC(pNtk, pFanin, first_find_msfc, id_multi_fanout_node, PO_node);
-        msfc_pair.push_back(first_find_msfc);
         // sort internally
         vector<int> temp_first_msfc;
         vector<Abc_Obj_t*> sorted_first_msfc;
@@ -171,6 +171,8 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
             if (Abc_ObjId(first_find_msfc[l]) == temp_first_msfc[k]) { sorted_first_msfc.push_back(first_find_msfc[l]); }
           }
         }
+        msfc_min_id.push_back(Abc_ObjId(sorted_first_msfc[0]));
+        msfc_pair.push_back(sorted_first_msfc);
         // for debugging
         printf("\n============================================\n");
         for (int k = 0 ; k < sorted_first_msfc.size() ; ++k)
@@ -195,7 +197,6 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
     vector<Abc_Obj_t*> second_find_msfc;
     // recursively traverse each fanin
     Lsv_Traverse_MSFC(pNtk, pNode, second_find_msfc, id_multi_fanout_node, PO_node);
-    msfc_pair.push_back(second_find_msfc);
     count += 1;
     // sort internally
     vector<int> temp_second_msfc;
@@ -212,6 +213,8 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
         if (Abc_ObjId(second_find_msfc[l]) == temp_second_msfc[k]) { sorted_second_msfc.push_back(second_find_msfc[l]); }
       }
     }
+    msfc_min_id.push_back(Abc_ObjId(sorted_second_msfc[0]));
+    msfc_pair.push_back(sorted_second_msfc);
     // for debugging
     cout << second_find_msfc.size() << endl;
     printf("\n============================================\n");
@@ -226,8 +229,29 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
   printf("========================================\n\n");
 
   // sort 
-  
+  sort(msfc_min_id.begin(), msfc_min_id.end());
+  vector<vector<Abc_Obj_t*>> final_ans;
+  for (int k = 0 ; k < msfc_min_id.size() ; ++k)
+  {
+    for (int l = 0 ; l < msfc_pair.size() ; ++l)
+    {
+      if (Abc_ObjId(msfc_pair[l][0]) == msfc_min_id[k]) { final_ans.push_back(msfc_pair[l]); }
+    }
+  }
+
   // output (print)
+  int count_ans = 0;
+  for (int k = 0 ; k < final_ans.size() ; ++k)
+  {
+    printf("MSFC %d: ", count_ans);
+    for (int l = 0 ; l < final_ans[k].size() ; ++l)
+    {
+      printf("%s", Abc_ObjName(final_ans[k][l]));
+      if (l == final_ans[k].size()-1) { printf("\n"); }
+      else { printf(","); }
+    }
+    ++count_ans;
+  }
 
 }
 
