@@ -240,6 +240,9 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
   }
 
   // output (print)
+  printf("\n===============\n");
+  printf("Final Answer...");
+  printf("\n===============\n");
   int count_ans = 0;
   for (int k = 0 ; k < final_ans.size() ; ++k)
   {
