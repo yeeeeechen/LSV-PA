@@ -113,7 +113,6 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
       int j;
       int count = 0;
       cout << "jkjkjkjkjkjkjkjk : " << sizeof(pObj->vFanouts) << endl;
-      cout << "jkjkjkjkjkjkjkjk : " << pObj->vFanouts.size() << endl;
       // recursively traverse each fanin
       Abc_ObjForEachFanout(pObj, pFanout, j)
       {
