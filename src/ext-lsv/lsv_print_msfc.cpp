@@ -104,6 +104,8 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
     printf("%s ", Abc_ObjName(pObj));
     ++count_node;
     msfc_flag[Abc_ObjId(pObj)] = 0;
+    if (Abc_ObjIsPi(pObj)) { cout << "edededededeededededede : " << Abc_ObjName(pObj) << endl; }
+    if (Abc_ObjIsPo(pObj)) { cout << "cvcvcvcvcvcvcvcvcvcvcv : " << Abc_ObjName(pObj) << endl; }
     // multi-fanout && not (PI / PO)
     if ((!Abc_ObjIsPi(pObj)) && (!Abc_ObjIsPo(pObj)) && (sizeof(pObj->vFanouts) > 1)) 
     {
