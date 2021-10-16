@@ -255,6 +255,7 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
     }
     ++count_ans;
   }
+  printf("\n");
 
 }
 
