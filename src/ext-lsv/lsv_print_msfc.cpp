@@ -160,7 +160,7 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
         printf("\n============================================\n");
         for (int k = 0 ; k < first_find_msfc.size() ; ++k)
         {
-          printf("%s ", Abc_ObjName(first_find_msfc[k]));
+          printf("%s (id = %d)", Abc_ObjName(first_find_msfc[k]), Abc_ObjId(first_find_msfc[k]));
         }
         printf("\n============================================\n");
       }
@@ -187,7 +187,7 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
     printf("\n============================================\n");
     for (int k = 0 ; k < second_find_msfc.size() ; ++k)
     {
-      printf("%s ", Abc_ObjName(second_find_msfc[k]));
+      printf("%s (id = %d)", Abc_ObjName(second_find_msfc[k]), Abc_ObjId(second_find_msfc[k]));
     }
     printf("\n============================================\n");
   }
