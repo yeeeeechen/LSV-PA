@@ -50,7 +50,8 @@ void Lsv_Traverse_MSFC(Abc_Ntk_t* pNtk, Abc_Obj_t* pNode, vector<Abc_Obj_t*>& fi
     cout << "hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh : " << Abc_ObjName(pNode) << " --> " << msfc_flag[Abc_ObjName(pNode)] << endl;
     msfc_flag[Abc_ObjName(pNode)] = 1; // marked as traversed 
     // Do not push back PO
-    if (!count(PO_node.begin(), PO_node.end(), Abc_ObjName(pNode))) { find_msfc.push_back(pNode); } 
+    find_msfc.push_back(pNode);
+    // if (!count(PO_node.begin(), PO_node.end(), Abc_ObjName(pNode))) { find_msfc.push_back(pNode); } 
   }
   // if all fanin are marked (flag = 1, -1) --> push back into ans_list 
     /*
