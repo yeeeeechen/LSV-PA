@@ -12,9 +12,9 @@
 00 1
 .names k10 s0
 0 1
-.names k11 b1 k13
-00 1
 .names k11 b1 k12
+00 1
+.names k11 b1 k13
 11 1
 .names k11 b1 k17
 01 1

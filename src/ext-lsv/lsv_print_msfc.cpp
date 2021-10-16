@@ -156,11 +156,26 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
       {
         Lsv_Traverse_MSFC(pNtk, pFanin, first_find_msfc, id_multi_fanout_node, PO_node);
         msfc_pair.push_back(first_find_msfc);
-        // for debugging
-        printf("\n============================================\n");
+        // sort internally
+        vector<int> temp_first_msfc;
+        vector<Abc_Obj_t*> sorted_first_msfc;
         for (int k = 0 ; k < first_find_msfc.size() ; ++k)
         {
-          printf("%s (id = %d)", Abc_ObjName(first_find_msfc[k]), Abc_ObjId(first_find_msfc[k]));
+          temp_first_msfc.push_back(Abc_ObjId(first_find_msfc[k]));
+        }
+        sort(temp_first_msfc.begin(), temp_first_msfc.end());
+        for (int k = 0 ; k < temp_first_msfc.size() ; ++k)
+        {
+          for (int l = 0 ; l < first_find_msfc.size() ; ++k)
+          {
+            if (Abc_ObjId(first_find_msfc[l]) == temp_first_msfc[k]) { sorted_first_msfc.push_back(first_find_msfc[l]); }
+          }
+        }
+        // for debugging
+        printf("\n============================================\n");
+        for (int k = 0 ; k < sorted_first_msfc.size() ; ++k)
+        {
+          printf("%s (id = %d) ", Abc_ObjName(sorted_first_msfc[k]), Abc_ObjId(sorted_first_msfc[k]));
         }
         printf("\n============================================\n");
       }
@@ -182,12 +197,27 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
     Lsv_Traverse_MSFC(pNtk, pNode, second_find_msfc, id_multi_fanout_node, PO_node);
     msfc_pair.push_back(second_find_msfc);
     count += 1;
+    // sort internally
+    vector<int> temp_second_msfc;
+    vector<Abc_Obj_t*> sorted_second_msfc;
+    for (int k = 0 ; k < second_find_msfc.size() ; ++k)
+    {
+      temp_second_msfc.push_back(Abc_ObjId(second_find_msfc[k]));
+    }
+    sort(temp_second_msfc.begin(), temp_second_msfc.end());
+    for (int k = 0 ; k < temp_second_msfc.size() ; ++k)
+    {
+      for (int l = 0 ; l < second_find_msfc.size() ; ++k)
+      {
+        if (Abc_ObjId(second_find_msfc[l]) == temp_second_msfc[k]) { sorted_second_msfc.push_back(second_find_msfc[l]); }
+      }
+    }
     // for debugging
     cout << second_find_msfc.size() << endl;
     printf("\n============================================\n");
-    for (int k = 0 ; k < second_find_msfc.size() ; ++k)
+    for (int k = 0 ; k < sorted_second_msfc.size() ; ++k)
     {
-      printf("%s (id = %d)", Abc_ObjName(second_find_msfc[k]), Abc_ObjId(second_find_msfc[k]));
+      printf("%s (id = %d) ", Abc_ObjName(sorted_second_msfc[k]), Abc_ObjId(sorted_second_msfc[k]));
     }
     printf("\n============================================\n");
   }
