@@ -132,7 +132,7 @@ void printMsfc(Abc_Ntk_t* pNtk)
   {
     if(!Abc_NodeIsTravIdCurrent( pNode ) && Abc_ObjFanoutNum(pNode) > 1 && Abc_ObjFaninNum(pFanin) != 0)
     {
-      std::cout << "node name : " << Abc_ObjName(pNode) << std::endl;
+      // std::cout << "node name : " << Abc_ObjName(pNode) << std::endl;
       assert(v.empty());
       FindTheSameMsfc(pNtk, pNode, v, vv);
       v.push_back(pNode);
