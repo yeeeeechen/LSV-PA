@@ -100,38 +100,48 @@ bool compareV(Abc_Obj_t* a, Abc_Obj_t* b)
 
 void FindConst(Abc_Ntk_t* pNtk, Abc_Obj_t* pObj, std::vector<Abc_Obj_t*> &v) 
 {
-  if ( Abc_NodeIsTravIdCurrent( pObj ) ) return;
+  if ( Abc_NodeIsTravIdCurrent( pObj )  || Abc_ObjIsPi(pObj) ) return;
   Abc_Obj_t* pFanin;
   int i;
   if(Abc_ObjType(pObj) == ABC_OBJ_CONST1)
   {
     Abc_NodeSetTravIdCurrent( pObj );
     v.push_back(pFanin);
+    return;
+  }
+  else
+  {
+    Abc_ObjForEachFanin(pObj, pFanin, i)
+    {
+        FindConst(pNtk, pFanin, v);
+    }
   }
   
-  Abc_ObjForEachFanin(pObj, pFanin, i)
-  {
-      FindConst(pNtk, pFanin, v);
-  }
-  return;
 }
 
 void printMsfc(Abc_Ntk_t* pNtk)
 {
   Abc_Obj_t* pPo;
+  Abc_Obj_t* pObj;
   std::vector<std::vector<Abc_Obj_t*> > vv;
   std::vector<Abc_Obj_t*> v;
   Abc_NtkIncrementTravId( pNtk );
   int i;
   Abc_Obj_t* pFanin;
   int j;
-  // Abc_NtkForEachPo(pNtk, pPo, i) 
-  // {
-  //   v.clear();
-  //   FindConst(pNtk, pPo, v);
-  //   vv.push_back(v);
-  //   v.clear();
-  // }
+  Abc_NtkForEachObj(pNtk, pObj, i) 
+  {
+    // std::cout<<"pi type = " << Abc_ObjType(pPi) << std::endl;
+    if(Abc_ObjType(pObj) == 1)
+    {
+      v.clear();
+      v.push_back(pObj);
+      vv.push_back(v);
+      v.clear();
+    }
+  }
+  std::cout << "bello" <<std::endl;
+  Abc_NtkIncrementTravId( pNtk );
   Abc_NtkForEachPo(pNtk, pPo, i) 
   {
     Abc_ObjForEachFanin(pPo, pFanin, j) 
