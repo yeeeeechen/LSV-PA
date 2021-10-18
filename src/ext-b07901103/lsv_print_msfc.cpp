@@ -85,7 +85,7 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
 
   Abc_NtkForEachNode(pNtk, pObj, node) 
   {
-    if (Abc_ObjFanoutNum(pNode) == 0) { cout << "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg" << endl; }
+    if (Abc_ObjFanoutNum(pObj) == 0) { cout << "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg" << endl; }
     if (Abc_ObjFanoutNum(pObj) <= 1) { Abc_NodeSetTravIdPrevious(pObj); }
   }
 
