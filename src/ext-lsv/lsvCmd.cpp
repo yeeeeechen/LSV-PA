@@ -3,6 +3,7 @@
 #include "base/main/mainInt.h"
 #include <vector>
 #include <algorithm>
+#include <unordered_map>
 
 static int Lsv_CommandPrintNodes(Abc_Frame_t* pAbc, int argc, char** argv);
 static int Lsv_CommandPrintMsfc(Abc_Frame_t* pAbc, int argc, char** argv);
@@ -37,43 +38,59 @@ void Lsv_NtkPrintNodes(Abc_Ntk_t* pNtk) {
   }
 }
 
-void msfc_traversal(Abc_Obj_t *pObj ,std::vector<Abc_Obj_t*>& vec, std::vector<Abc_Obj_t*>& Ids){
-  int j, k = 0;
+void msfc_traversal(Abc_Obj_t *pObj ,std::vector<Abc_Obj_t*>& vec, std::vector<Abc_Obj_t*>& Ids, std::unordered_map<Abc_Obj_t*, int>& flag){
+  int j;
   Abc_Obj_t *pFanin;
+  std::vector<Abc_Obj_t*> tmp;
   Abc_ObjForEachFanin(pObj, pFanin, j) {
-    if(Abc_ObjIsNode(pFanin) && Abc_ObjFanoutNum(pFanin) == 1){
-      vec.push_back(pFanin);
-      std::vector<Abc_Obj_t*>::iterator iter = std::find(Ids.begin(), Ids.end(), pFanin);
-      Ids.erase(iter);
-      msfc_traversal(pFanin, vec, Ids);
+    if(Abc_ObjIsNode(pFanin) && Abc_ObjFanoutNum(pFanin) == 1){ 
+      flag[pFanin] = -1;
+      tmp.push_back(pFanin);
     }
   }
+  for(int i=tmp.size()-1; i>-1; --i) {
+    vec.push_back(tmp[i]); 
+    msfc_traversal(tmp[i], vec, Ids, flag);
+  }
+  tmp.clear();
+  
   return;
+}
+
+bool msfccompare(std::vector<Abc_Obj_t*>& a, std::vector<Abc_Obj_t*>&  b) {
+    return Abc_ObjId(a[a.size()-1]) < Abc_ObjId(b[b.size()-1]); 
 }
 
 void Lsv_NtkPrintMsfc(Abc_Ntk_t* pNtk) {
   Abc_Obj_t *pObj, *tmp_Obj;
-  int i = 0, j;
+  int i = 0;
   Abc_NtkIncrementTravId(pNtk);
   std::vector<Abc_Obj_t*> Ids, vec;
+  std::unordered_map<Abc_Obj_t*, int> flag;
   std::vector<std::vector<Abc_Obj_t*>> msfc;
   std::vector<Abc_Obj_t*>::iterator iter;
   Abc_NtkForEachNode(pNtk, pObj, i){
     Ids.push_back(pObj);
+    flag[pObj] = 0;
   }
-  while(Ids.size() > 0) {
-    tmp_Obj = Ids.back();
-    printf("Id: %d\n", Abc_ObjId(tmp_Obj));
-    Ids.pop_back();
-    vec.push_back(tmp_Obj);
-    msfc_traversal(tmp_Obj, vec, Ids);
-    msfc.push_back(vec);
-    vec.clear();
+  for(int i=Ids.size()-1; i>-1; --i){
+    if(flag[Ids[i]] == -1){
+      continue;
+    }
+    else{
+      tmp_Obj = Ids[i];
+      flag[tmp_Obj] = -1;
+      vec.push_back(tmp_Obj);
+      msfc_traversal(tmp_Obj, vec, Ids, flag);
+      msfc.push_back(vec);
+      vec.clear();
+    }
   }
+  std::sort(msfc.begin(), msfc.end(), msfccompare);
   for(int k=0; k<msfc.size(); ++k){
     printf("MSFC %d: ", k);
-    for(int l=0; l<msfc[k].size(); ++l){
-      if(l == 0) printf("%s", Abc_ObjName(msfc[k][l]));
+    for(int l=msfc[k].size()-1; l>-1; --l){
+      if(l == msfc[k].size()-1) printf("%s", Abc_ObjName(msfc[k][l]));
       else printf(",%s", Abc_ObjName(msfc[k][l]));
     }
     printf("\n");
