@@ -34,6 +34,17 @@ struct PackageRegistrationManager
 // ** msfc flag **
 // default = 0, traverse = 1, (PI or multi-fanout) = -1
 
+// compare function
+bool compareV(Abc_Obj_t* a, Abc_Obj_t* b)
+{
+  return Abc_ObjId(a) < Abc_ObjId(b);
+}
+
+bool compareVV(vector<Abc_Obj_t*>& a, vector<Abc_Obj_t*>& b)
+{
+  return Abc_ObjId(a[0]) < Abc_ObjId(b[0]);
+}
+
 // unordered map --> <name, flag>
 unordered_map<string, int> msfc_flag;
 
@@ -100,22 +111,23 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
       {
         Lsv_Traverse_MSFC(pNtk, pFanin, first_find_msfc, id_multi_fanout_node, PO_node);
         // sort internally
-        vector<int> temp_first_msfc;
-        vector<Abc_Obj_t*> sorted_first_msfc;
-        for (int k = 0 ; k < first_find_msfc.size() ; ++k)
-        {
-          temp_first_msfc.push_back(Abc_ObjId(first_find_msfc[k]));
-        }
-        sort(temp_first_msfc.begin(), temp_first_msfc.end());
-        for (int k = 0 ; k < temp_first_msfc.size() ; ++k)
-        {
-          for (int l = 0 ; l < first_find_msfc.size() ; ++l)
-          {
-            if (Abc_ObjId(first_find_msfc[l]) == temp_first_msfc[k]) { sorted_first_msfc.push_back(first_find_msfc[l]); }
-          }
-        }
-        msfc_min_id.push_back(Abc_ObjId(sorted_first_msfc[0]));
-        msfc_pair.push_back(sorted_first_msfc);
+        sort(first_find_msfc.begin(), first_find_msfc.end(), compareV);
+        // vector<int> temp_first_msfc;
+        // vector<Abc_Obj_t*> sorted_first_msfc;
+        // for (int k = 0 ; k < first_find_msfc.size() ; ++k)
+        // {
+        //   temp_first_msfc.push_back(Abc_ObjId(first_find_msfc[k]));
+        // }
+        // sort(temp_first_msfc.begin(), temp_first_msfc.end());
+        // for (int k = 0 ; k < temp_first_msfc.size() ; ++k)
+        // {
+        //   for (int l = 0 ; l < first_find_msfc.size() ; ++l)
+        //   {
+        //     if (Abc_ObjId(first_find_msfc[l]) == temp_first_msfc[k]) { sorted_first_msfc.push_back(first_find_msfc[l]); }
+        //   }
+        // }
+        // msfc_min_id.push_back(Abc_ObjId(sorted_first_msfc[0]));
+        msfc_pair.push_back(first_find_msfc);
       }
     }
   }
@@ -131,34 +143,36 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
     Lsv_Traverse_MSFC(pNtk, pNode, second_find_msfc, id_multi_fanout_node, PO_node);
     count += 1;
     // sort internally
-    vector<int> temp_second_msfc;
-    vector<Abc_Obj_t*> sorted_second_msfc;
-    for (int k = 0 ; k < second_find_msfc.size() ; ++k)
-    {
-      temp_second_msfc.push_back(Abc_ObjId(second_find_msfc[k]));
-    }
-    sort(temp_second_msfc.begin(), temp_second_msfc.end());
-    for (int k = 0 ; k < temp_second_msfc.size() ; ++k)
-    {
-      for (int l = 0 ; l < second_find_msfc.size() ; ++l)
-      {
-        if (Abc_ObjId(second_find_msfc[l]) == temp_second_msfc[k]) { sorted_second_msfc.push_back(second_find_msfc[l]); }
-      }
-    }
-    msfc_min_id.push_back(Abc_ObjId(sorted_second_msfc[0]));
-    msfc_pair.push_back(sorted_second_msfc);
+    sort(second_find_msfc.begin(), second_find_msfc.end(), compareV);
+    // vector<int> temp_second_msfc;
+    // vector<Abc_Obj_t*> sorted_second_msfc;
+    // for (int k = 0 ; k < second_find_msfc.size() ; ++k)
+    // {
+    //   temp_second_msfc.push_back(Abc_ObjId(second_find_msfc[k]));
+    // }
+    // sort(temp_second_msfc.begin(), temp_second_msfc.end());
+    // for (int k = 0 ; k < temp_second_msfc.size() ; ++k)
+    // {
+    //   for (int l = 0 ; l < second_find_msfc.size() ; ++l)
+    //   {
+    //     if (Abc_ObjId(second_find_msfc[l]) == temp_second_msfc[k]) { sorted_second_msfc.push_back(second_find_msfc[l]); }
+    //   }
+    // }
+    // msfc_min_id.push_back(Abc_ObjId(sorted_second_msfc[0]));
+    msfc_pair.push_back(second_find_msfc);
   }
 
   // sort 
-  sort(msfc_min_id.begin(), msfc_min_id.end());
-  vector<vector<Abc_Obj_t*>> final_ans;
-  for (int k = 0 ; k < msfc_min_id.size() ; ++k)
-  {
-    for (int l = 0 ; l < msfc_pair.size() ; ++l)
-    {
-      if (Abc_ObjId(msfc_pair[l][0]) == msfc_min_id[k]) { final_ans.push_back(msfc_pair[l]); }
-    }
-  }
+  sort(msfc_pair.begin(), msfc_pair.end(), compareVV);
+  // sort(msfc_min_id.begin(), msfc_min_id.end());
+  // vector<vector<Abc_Obj_t*>> final_ans;
+  // for (int k = 0 ; k < msfc_min_id.size() ; ++k)
+  // {
+  //   for (int l = 0 ; l < msfc_pair.size() ; ++l)
+  //   {
+  //     if (Abc_ObjId(msfc_pair[l][0]) == msfc_min_id[k]) { final_ans.push_back(msfc_pair[l]); }
+  //   }
+  // }
 
   // output (print)
   int count_ans = 0;
