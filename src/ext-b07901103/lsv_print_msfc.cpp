@@ -51,8 +51,6 @@ bool compareVV(vector<Abc_Obj_t*>& a, vector<Abc_Obj_t*>& b)
 // traverse function
 void Lsv_Traverse_MSFC(Abc_Ntk_t* pNtk, Abc_Obj_t* pNode, vector<Abc_Obj_t*>& find_msfc)
 {
-  // if const1 --> add
-  if (Abc_ObjFanoutNum(pNode) == 0) { cout << "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg" << endl; find_msfc.push_back(pNode); return; }
   // if meet multi-fanout --> return (count = 1 --> exist)
   if ((!Abc_NodeIsTravIdPrevious(pNode)) && (!Abc_NodeIsTravIdCurrent(pNode))) { return; }
   if (Abc_NodeIsTravIdCurrent(pNode)) { return; }
@@ -85,7 +83,6 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
 
   Abc_NtkForEachNode(pNtk, pObj, node) 
   {
-    if (Abc_ObjFanoutNum(pObj) == 0) { cout << "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg" << endl; }
     if (Abc_ObjFanoutNum(pObj) <= 1) { Abc_NodeSetTravIdPrevious(pObj); }
   }
 
@@ -105,6 +102,12 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
         Lsv_Traverse_MSFC(pNtk, pFanin, first_find_msfc);
         // sort internally
         sort(first_find_msfc.begin(), first_find_msfc.end(), compareV);
+        msfc_pair.push_back(first_find_msfc);
+      }
+      // if const1 --> add
+      if (Abc_ObjFaninNum(pFanin) == 0)
+      {
+        first_find_msfc.push_back(pFanin);
         msfc_pair.push_back(first_find_msfc);
       }
     }
