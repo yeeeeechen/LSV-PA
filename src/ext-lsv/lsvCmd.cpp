@@ -142,7 +142,7 @@ void printMsfc(Abc_Ntk_t* pNtk)
     }
   }
   // std::cout << "bello" <<std::endl;
-  // Abc_NtkIncrementTravId( pNtk );
+  Abc_NtkIncrementTravId( pNtk );
   Abc_NtkForEachPo(pNtk, pPo, i) 
   {
     Abc_ObjForEachFanin(pPo, pFanin, j) 
