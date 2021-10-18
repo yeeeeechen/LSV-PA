@@ -176,14 +176,14 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
 
   // output (print)
   int count_ans = 0;
-  for (int k = 0 ; k < final_ans.size() ; ++k)
+  for (int k = 0 ; k < msfc_pair.size() ; ++k)
   {
     printf("MSFC %d: ", count_ans);
-    for (int l = 0 ; l < final_ans[k].size() ; ++l)
+    for (int l = 0 ; l < msfc_pair[k].size() ; ++l)
     {
       // printf("%s (id = %d) ", Abc_ObjName(final_ans[k][l]), Abc_ObjId(final_ans[k][l]));
-      printf("%s", Abc_ObjName(final_ans[k][l]));
-      if (l == final_ans[k].size()-1) { printf("\n"); }
+      printf("%s", Abc_ObjName(msfc_pair[k][l]));
+      if (l == msfc_pair[k].size()-1) { printf("\n"); }
       else { printf(","); }
     }
     ++count_ans;
