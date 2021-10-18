@@ -69,9 +69,11 @@ void Lsv_NtkPrintMsfc(Abc_Ntk_t* pNtk) {
   std::unordered_map<Abc_Obj_t*, int> flag;
   std::vector<std::vector<Abc_Obj_t*>> msfc;
   std::vector<Abc_Obj_t*>::iterator iter;
-  Abc_NtkForEachNode(pNtk, pObj, i){
-    Ids.push_back(pObj);
-    flag[pObj] = 0;
+  Abc_NtkForEachObj(pNtk, pObj, i){
+    if(Abc_ObjIsNode(pObj) || pObj->Type == ABC_OBJ_CONST1) {
+      Ids.push_back(pObj);
+      flag[pObj] = 0;
+    } 
   }
   for(int i=Ids.size()-1; i>-1; --i){
     if(flag[Ids[i]] == -1){
