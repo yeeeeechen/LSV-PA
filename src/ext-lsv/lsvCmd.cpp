@@ -127,7 +127,7 @@ void printMsfc(Abc_Ntk_t* pNtk)
     }
   }
   Abc_Obj_t* pNode;
-  Abc_ObjForeachPi
+  // Abc_ObjForeachPi
   Abc_NtkForEachNode(pNtk, pNode,i)
   {
     if(!Abc_NodeIsTravIdCurrent( pNode ) && Abc_ObjFanoutNum(pNode) > 1 && !Abc_ObjIsPi(pNode))
