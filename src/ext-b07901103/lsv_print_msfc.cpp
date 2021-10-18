@@ -45,8 +45,8 @@ bool compareVV(vector<Abc_Obj_t*>& a, vector<Abc_Obj_t*>& b)
   return Abc_ObjId(a[0]) < Abc_ObjId(b[0]);
 }
 
-// unordered map --> <name, flag>
-
+// unordered map --> <const name, flag>
+unordered_map<string, int> const_exist;
 
 // traverse function
 void Lsv_Traverse_MSFC(Abc_Ntk_t* pNtk, Abc_Obj_t* pNode, vector<Abc_Obj_t*>& find_msfc)
@@ -104,13 +104,14 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
         sort(first_find_msfc.begin(), first_find_msfc.end(), compareV);
         msfc_pair.push_back(first_find_msfc);
       }
-      // if const1 --> add
+      // if const1 --> add (can only exist once)
       if (Abc_ObjFaninNum(pFanin) == 0)
       {
-        if (Abc_ObjType(pFanin) == 1)
+        if ((Abc_ObjType(pFanin) == 1) && (!const_exist.count(Abc_ObjName(pFanin))))
         {
           first_find_msfc.push_back(pFanin);
           msfc_pair.push_back(first_find_msfc);
+          const_exist[Abc_ObjName(pFanin)] = 1;
         }
       }
     }
