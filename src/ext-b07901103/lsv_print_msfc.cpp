@@ -126,7 +126,6 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
       vector<Abc_Obj_t*> second_find_msfc;
       // recursively traverse each fanin
       Lsv_Traverse_MSFC(pNtk, pMulti, second_find_msfc);
-      count += 1;
       // sort internally
       sort(second_find_msfc.begin(), second_find_msfc.end(), compareV);
       msfc_pair.push_back(second_find_msfc);
