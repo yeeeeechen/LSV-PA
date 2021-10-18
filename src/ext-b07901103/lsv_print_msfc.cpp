@@ -52,7 +52,7 @@ bool compareVV(vector<Abc_Obj_t*>& a, vector<Abc_Obj_t*>& b)
 void Lsv_Traverse_MSFC(Abc_Ntk_t* pNtk, Abc_Obj_t* pNode, vector<Abc_Obj_t*>& find_msfc)
 {
   // if const1 --> add
-  if ((!Abc_NodeIsTravIdPrevious(pNode)) && (!Abc_NodeIsTravIdCurrent(pNode)) && (Abc_ObjType(pNode) == 1)) { find_msfc.push_back(pNode); return; }
+  if (Abc_ObjType(pNode) == 1) { cout << "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg" << endl; find_msfc.push_back(pNode); return; }
   // if meet multi-fanout --> return (count = 1 --> exist)
   if ((!Abc_NodeIsTravIdPrevious(pNode)) && (!Abc_NodeIsTravIdCurrent(pNode))) { return; }
   if (Abc_NodeIsTravIdCurrent(pNode)) { return; }
