@@ -107,9 +107,11 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
       // if const1 --> add
       if (Abc_ObjFaninNum(pFanin) == 0)
       {
-        cout << "gggggggggggggggggggggggg : " << Abc_ObjName(pFanin) << " --> " << Abc_ObjType(pFanin) << endl;
-        first_find_msfc.push_back(pFanin);
-        msfc_pair.push_back(first_find_msfc);
+        if (Abc_ObjType(pFanin) == 1)
+        {
+          first_find_msfc.push_back(pFanin);
+          msfc_pair.push_back(first_find_msfc);
+        }
       }
     }
   }
