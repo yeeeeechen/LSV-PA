@@ -107,14 +107,23 @@ void printMsfc(Abc_Ntk_t* pNtk)
   int i;
   Abc_Obj_t* pFanin;
   int j;
+  // Abc_NtkForEachPo(pNtk, pPo, i) 
+  // {
+  //   std::cout << "fanin num = " << Abc_ObjFaninNum(pPo) << std::endl;
+  // }
   Abc_NtkForEachPo(pNtk, pPo, i) 
   {
     Abc_ObjForEachFanin(pPo, pFanin, j) 
     {
-      FindTheSameMsfc(pNtk, pFanin, v, vv);
-      v.push_back(pFanin);
-      vv.push_back(v);
-      v.clear();
+      if(!Abc_NodeIsTravIdCurrent( pFanin ))
+      {
+        assert(v.empty());
+        FindTheSameMsfc(pNtk, pFanin, v, vv);
+        v.push_back(pFanin);
+        vv.push_back(v);
+        v.clear();
+      }
+      // std::cout << "fanout num = " << Abc_ObjFanoutNum(pFanin) << std::endl;
     }
   }
   Abc_Obj_t* pNode;
@@ -122,6 +131,7 @@ void printMsfc(Abc_Ntk_t* pNtk)
   {
     if(!Abc_NodeIsTravIdCurrent( pNode ) && Abc_ObjFanoutNum(pNode) > 1)
     {
+      assert(v.empty());
       FindTheSameMsfc(pNtk, pNode, v, vv);
       v.push_back(pNode);
       vv.push_back(v);
