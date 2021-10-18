@@ -53,6 +53,7 @@ void Lsv_Traverse_MSFC(Abc_Ntk_t* pNtk, Abc_Obj_t* pNode, vector<Abc_Obj_t*>& fi
 {
   // if meet multi-fanout --> return (count = 1 --> exist)
   if ((!Abc_NodeIsTravIdPrevious(pNode)) && (!Abc_NodeIsTravIdCurrent(pNode))) { return; }
+  if (Abc_NodeIsTravIdCurrent(pNode)) { return; }
   if (Abc_NodeIsTravIdPrevious(pNode))
   {
     Abc_NodeSetTravIdCurrent(pNode); // marked as traversed 
@@ -73,7 +74,6 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
   Abc_Obj_t* PO;
   int i;
   vector<vector<Abc_Obj_t*>> msfc_pair;
-  // vector<Abc_Obj_t*>  multi_fanout_node; /* temp store those have multi fanout's gate */
   // default each node with flag=0 && find whether has "multi-fanout"
   Abc_Obj_t* pObj;
   int node;
@@ -83,12 +83,6 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
 
   Abc_NtkForEachNode(pNtk, pObj, node) 
   {
-    // multi-fanout && not (PI / PO)
-    // if ((Abc_ObjFanoutNum(pObj) > 1)) 
-    // {
-    //   multi_fanout_node.push_back(pObj);
-    // }
-    // else { Abc_NodeSetTravIdPrevious(pObj); }
     if (Abc_ObjFanoutNum(pObj) <= 1) { Abc_NodeSetTravIdPrevious(pObj); }
   }
 
@@ -132,19 +126,6 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
     }
 
   }
-
-  // for (int i = 0 ; i < multi_fanout_node.size() ; ++i)
-  // {
-  //   // mark the root as flag = 0
-  //   Abc_NodeSetTravIdPrevious(multi_fanout_node[i]);
-  //   vector<Abc_Obj_t*> second_find_msfc;
-  //   // recursively traverse each fanin
-  //   Lsv_Traverse_MSFC(pNtk, multi_fanout_node[i], second_find_msfc);
-  //   count += 1;
-  //   // sort internally
-  //   sort(second_find_msfc.begin(), second_find_msfc.end(), compareV);
-  //   msfc_pair.push_back(second_find_msfc);
-  // }
 
   // sort 
   sort(msfc_pair.begin(), msfc_pair.end(), compareVV);
