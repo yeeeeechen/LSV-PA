@@ -132,16 +132,17 @@ void printMsfc(Abc_Ntk_t* pNtk)
   Abc_NtkForEachObj(pNtk, pObj, i) 
   {
     // std::cout<<"pi type = " << Abc_ObjType(pPi) << std::endl;
-    if(Abc_ObjType(pObj) == 1)
+    if(Abc_ObjType(pObj) == 1 && !Abc_NodeIsTravIdCurrent( pObj ))
     {
+      Abc_NodeSetTravIdCurrent( pObj );
       v.clear();
       v.push_back(pObj);
       vv.push_back(v);
       v.clear();
     }
   }
-  std::cout << "bello" <<std::endl;
-  Abc_NtkIncrementTravId( pNtk );
+  // std::cout << "bello" <<std::endl;
+  // Abc_NtkIncrementTravId( pNtk );
   Abc_NtkForEachPo(pNtk, pPo, i) 
   {
     Abc_ObjForEachFanin(pPo, pFanin, j) 
