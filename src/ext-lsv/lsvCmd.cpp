@@ -44,11 +44,11 @@ void Lsv_NtkPrintNodes(Abc_Ntk_t* pNtk) {
 void FindTheSameMsfc(Abc_Ntk_t* pNtk, Abc_Obj_t* pObj, std::vector<Abc_Obj_t*> &v,std::vector<std::vector<Abc_Obj_t*> > &vv) {
   Abc_Obj_t* pFanin;
   int i;
-  if ( Abc_NodeIsTravIdCurrent( pObj ) ) return;
+  if ( Abc_NodeIsTravIdCurrent( pObj ) || Abc_ObjFaninNum(pFanin) == 0) return;
   Abc_NodeSetTravIdCurrent( pObj );
   Abc_ObjForEachFanin(pObj, pFanin, i)
   {
-    if(Abc_ObjFanoutNum(pFanin) == 1)
+    if(Abc_ObjFanoutNum(pFanin) == 1 && Abc_ObjFaninNum(pFanin) != 0)
     {
       // TODO : set to the same group
       FindTheSameMsfc(pNtk, pFanin, v, vv);
@@ -115,7 +115,7 @@ void printMsfc(Abc_Ntk_t* pNtk)
   {
     Abc_ObjForEachFanin(pPo, pFanin, j) 
     {
-      if(!Abc_NodeIsTravIdCurrent( pFanin ))
+      if(!Abc_NodeIsTravIdCurrent( pFanin ) && Abc_ObjFaninNum(pFanin) != 0)
       {
         assert(v.empty());
         FindTheSameMsfc(pNtk, pFanin, v, vv);
@@ -127,10 +127,12 @@ void printMsfc(Abc_Ntk_t* pNtk)
     }
   }
   Abc_Obj_t* pNode;
+  // Abc_ObjForeachPi
   Abc_NtkForEachNode(pNtk, pNode,i)
   {
-    if(!Abc_NodeIsTravIdCurrent( pNode ) && Abc_ObjFanoutNum(pNode) > 1)
+    if(!Abc_NodeIsTravIdCurrent( pNode ) && Abc_ObjFanoutNum(pNode) > 1 && Abc_ObjFaninNum(pFanin) != 0)
     {
+      std::cout << "node name : " << Abc_ObjName(pNode) << std::endl;
       assert(v.empty());
       FindTheSameMsfc(pNtk, pNode, v, vv);
       v.push_back(pNode);
