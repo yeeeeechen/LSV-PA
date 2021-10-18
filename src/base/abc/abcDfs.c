@@ -261,7 +261,10 @@ void Abc_NtkDfsReverseNodes_rec( Abc_Obj_t * pNode, Vec_Ptr_t * vNodes )
     assert( !Abc_ObjIsNet(pNode) );
     // if this node is already visited, skip
     if ( Abc_NodeIsTravIdCurrent( pNode ) )
+    {
         return;
+    }
+        
     // mark the node as visited
     Abc_NodeSetTravIdCurrent( pNode );
     // skip the CI
