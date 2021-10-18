@@ -95,6 +95,7 @@ void Lsv_NtkPrintMsfc(Abc_Ntk_t* pNtk) {
     }
     printf("\n");
   }
+  return;
 }
 
 
