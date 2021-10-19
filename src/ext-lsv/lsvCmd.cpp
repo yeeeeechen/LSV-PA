@@ -98,25 +98,32 @@ bool compareV(Abc_Obj_t* a, Abc_Obj_t* b)
   return a -> Id < b -> Id;
 } 
 
-void FindConst(Abc_Ntk_t* pNtk, Abc_Obj_t* pObj, std::vector<Abc_Obj_t*> &v) 
-{
-  if ( Abc_NodeIsTravIdCurrent( pObj )  || Abc_ObjIsPi(pObj) ) return;
+void FindConst(Abc_Ntk_t* pNtk, Abc_Obj_t* pObj, std::vector<Abc_Obj_t*> &v,std::vector<std::vector<Abc_Obj_t*> > &vv) {
   Abc_Obj_t* pFanin;
   int i;
-  if(Abc_ObjType(pObj) == ABC_OBJ_CONST1)
+  if ( Abc_NodeIsTravIdCurrent( pObj ) ) return;
+  Abc_NodeSetTravIdCurrent( pObj );
+  if(Abc_ObjType(pObj) == 1)
   {
-    Abc_NodeSetTravIdCurrent( pObj );
-    v.push_back(pFanin);
-    return;
+    v.push_back(pObj);
+      return;
   }
-  else
+  Abc_ObjForEachFanin(pObj, pFanin, i)
   {
-    Abc_ObjForEachFanin(pObj, pFanin, i)
+    if(Abc_ObjType(pFanin) == 1)
     {
-        FindConst(pNtk, pFanin, v);
+      // TODO : set to the same group
+      // FindTheSameMsfc(pNtk, pFanin, v, vv);
+      Abc_NodeSetTravIdCurrent( pFanin );
+      v.push_back(pFanin);
+      return;
+    }
+    else
+    {
+      FindConst(pNtk, pFanin, v, vv);
     }
   }
-  
+  return;
 }
 
 void printMsfc(Abc_Ntk_t* pNtk)
@@ -125,23 +132,38 @@ void printMsfc(Abc_Ntk_t* pNtk)
   Abc_Obj_t* pObj;
   std::vector<std::vector<Abc_Obj_t*> > vv;
   std::vector<Abc_Obj_t*> v;
-  Abc_NtkIncrementTravId( pNtk );
+  // Abc_NtkIncrementTravId( pNtk );
   int i;
   Abc_Obj_t* pFanin;
   int j;
+  // Abc_NtkForEachPo(pNtk, pPo, i) 
+  // {
+  //   Abc_ObjForEachFanin(pPo, pFanin, j) 
+  //   {
+  //     // std::cout<<"pi type = " << Abc_ObjType(pPi) << std::endl;
+  //     if(!Abc_NodeIsTravIdCurrent( pFanin ) )
+  //     {
+  //       v.clear();
+  //       Abc_NodeSetTravIdCurrent( pFanin );
+  //       FindConst(pNtk, pFanin, v, vv);
+  //       std::cout << "v[0] - " << Abc_ObjName( v[0]) <<std::endl;
+  //       vv.push_back(v);
+  //       v.clear();
+  //     }
+  //   }
+  // }
+  // std::cout << "bello" <<std::endl;
   Abc_NtkForEachObj(pNtk, pObj, i) 
   {
-    // std::cout<<"pi type = " << Abc_ObjType(pPi) << std::endl;
-    if(Abc_ObjType(pObj) == 1 && !Abc_NodeIsTravIdCurrent( pObj ))
+    // std::cout<<"pObj type = " << Abc_ObjType(pObj) << " " << Abc_ObjFanoutNum(pObj) << std::endl;
+    if( Abc_ObjType(pObj) == ABC_OBJ_CONST1 && Abc_ObjFanoutNum(pObj) == 1)
     {
-      Abc_NodeSetTravIdCurrent( pObj );
       v.clear();
       v.push_back(pObj);
       vv.push_back(v);
       v.clear();
     }
   }
-  // std::cout << "bello" <<std::endl;
   Abc_NtkIncrementTravId( pNtk );
   Abc_NtkForEachPo(pNtk, pPo, i) 
   {
