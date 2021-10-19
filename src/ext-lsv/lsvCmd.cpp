@@ -156,7 +156,7 @@ void printMsfc(Abc_Ntk_t* pNtk)
   Abc_NtkForEachObj(pNtk, pObj, i) 
   {
     // std::cout<<"pObj type = " << Abc_ObjType(pObj) << " " << Abc_ObjFanoutNum(pObj) << std::endl;
-    if( Abc_ObjType(pObj) == ABC_OBJ_CONST1 && Abc_ObjFanoutNum(pObj) == 1)
+    if( Abc_ObjType(pObj) == ABC_OBJ_CONST1 && Abc_ObjFanoutNum(pObj) > 0)
     {
       v.clear();
       v.push_back(pObj);
