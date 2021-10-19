@@ -70,13 +70,9 @@ usage:
 
 Abc_Obj_t * find_daminating_node(Abc_Obj_t *pObj)
 {
-  if (pObj->fMarkA == true)
-  {
-    // printf("error! find_daminating_node's input node has been marked.\n");
-  }
   if (Abc_ObjFanoutNum(pObj) == 1)
   {
-    if (Abc_ObjIsPo(Abc_ObjFanout(pObj, 0)) || Abc_ObjIsLatch(Abc_ObjFanout(pObj, 0)))
+    if (Abc_ObjIsPo(Abc_ObjFanout(pObj, 0)))
     {
       // printf("find_daminating_node reaches PO.\n");
       return pObj;
@@ -102,7 +98,7 @@ void find_MSFC(Abc_Obj_t *node, std::vector<Abc_Obj_t *>& MSFC)
     MSFC.push_back(node);
     Abc_ObjForEachFanin(node, pFanin, j)
     {
-      if (Abc_ObjIsPi(pFanin) == false && Abc_ObjIsLatch(pFanin) == false)
+      if (Abc_ObjIsPi(pFanin) == false && Abc_ObjFanoutNum(pFanin) == 1)
       {
         find_MSFC(pFanin, MSFC);
       }
@@ -114,46 +110,22 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk) {
   Abc_Obj_t* pObj;
   int i;
 
-  // Abc_NtkForEachNode(pNtk, pObj, i)
-  // {
-  //   printf("Object Id = %d, name = %s\n", Abc_ObjId(pObj), Abc_ObjName(pObj));
-  // }
-
-  // int node_num = Vec_PtrSize((pNtk)->vObjs);
-  // int disjoint_set[node_num];
-  // int set2id[node_num];
-  // Abc_NtkForEachNode(pNtk, pObj, i)
-  // {
-  //   set2id[i] = Abc_ObjId(pObj);
-  // }
-  // for (int i = 0; i < node_num; i++)
-  // {
-  //   disjoint_set[i] = i;
-  // }
-
-  // Abc_NtkNodeNum(pNtk);
-
-  // Abc_NtkForEachNode(pNtk, pObj, i)
-  // {
-  //   // if fanout > 1, belongs to itself
-  //   // else if fanout == 1, union its fanout
-  //   if (Abc_ObjFanoutNum(pObj) == 1)
-  //   {
-  //     dsjoint_set_union(Abc_ObjId(pObj), Abc_ObjId(Abc_ObjFanout(pObj, 0)));
-  //   }
-  // }
-
   std::vector<std::vector<Abc_Obj_t *>> MSFCs;
   Abc_NtkCleanMarkA(pNtk);
 
-  Abc_NtkForEachNode(pNtk, pObj, i) {
-    if (pObj->fMarkA == true)
+  Abc_NtkForEachObj(pNtk, pObj, i) {
+    if (!Abc_ObjIsNode(pObj) && pObj->Type != ABC_OBJ_CONST1)
     {
       continue;
     }
-    if (Abc_ObjIsLatch(pObj) || Abc_ObjIsPi(pObj) || Abc_ObjIsPo(pObj))
+
+    if (Abc_ObjFanoutNum(pObj) == 0)
     {
-      pObj->fMarkA = true;
+      continue;
+    }
+
+    if (pObj->fMarkA == true)
+    {
       continue;
     }
 
@@ -195,6 +167,8 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk) {
     }
     printf("\n");
   }
+
+  Abc_NtkCleanMarkA(pNtk);
 }
 
 int Lsv_CommandPrintMSFC(Abc_Frame_t* pAbc, int argc, char** argv) {
@@ -213,6 +187,9 @@ int Lsv_CommandPrintMSFC(Abc_Frame_t* pAbc, int argc, char** argv) {
     Abc_Print(-1, "Empty network.\n");
     return 1;
   }
+
+  assert(Abc_NtkIsStrash(pNtk));
+
   Lsv_NtkPrintMSFC(pNtk);
   return 0;
 
