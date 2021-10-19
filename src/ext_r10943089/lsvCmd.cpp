@@ -38,10 +38,8 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk) {
   queue<Abc_Obj_t*> _objQueue; // queue to avoid recursive call
 
   // initial map with index = -1
-  // printf("=====Traverse each node and Po=====\n");
   bool const1 = false;
   Abc_NtkForEachNode(pNtk, pObj, i) {
-    // printf("Object Id = %d, name = %s\n", Abc_ObjId(pObj), Abc_ObjName(pObj));
     if (!Abc_ObjIsPo(pObj)) { _msfcMap[pObj] = -1; }
   }
   // initial PO's index and push into queue
@@ -50,13 +48,11 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk) {
       if ((!Abc_ObjIsPi(pFanin) && _msfcMap[pFanin] == -1))
       {
         _msfcMap[pFanin] = msfcIndex;
-        // printf("PO FanIn Id = %d, name = %s, index= %d\n", Abc_ObjId(pFanin), Abc_ObjName(pFanin), msfcIndex);
         _objQueue.push(pFanin);
         msfcIndex++;
       }
       if(Abc_AigNodeIsConst(pFanin) && !const1)
       {
-        // printf("Po FanIn is Const1. %s\n", Abc_ObjName(pFanin));
         _msfcMap[pFanin] = msfcIndex;
         msfcIndex++;
         const1 = true;
@@ -65,52 +61,39 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk) {
   }
 
   // from queue calc their index in msfc
-  // printf("=====Construct MSFC ======\n");
   while(!_objQueue.empty()) {
     pObj = _objQueue.front();
     _objQueue.pop();
-    // printf("Object Id = %d, name = %s\n", Abc_ObjId(pObj), Abc_ObjName(pObj));
     Abc_ObjForEachFanin(pObj, pFanin, i) {
-      // printf("  pFanin Id = %d, name = %s\n", Abc_ObjId(pFanin), Abc_ObjName(pFanin));
       if (!Abc_ObjIsPi(pFanin) && _msfcMap[pFanin] == -1) {
         if (Abc_ObjFanoutNum(pFanin) == 1) {
           _msfcMap[pFanin] = _msfcMap[pObj];
-          // printf("    pFanin is the same msfc as its parent! (%d)\n", _msfcMap[pFanin]);
         } else {
           _msfcMap[pFanin] = msfcIndex;
-          // printf("    New msfc is construct (%d)!\n", msfcIndex);
           msfcIndex++;
         }
         _objQueue.push(pFanin);
       }
     }
   }
-  // printf("=====Construct MSFC finished=====\n");
 
   // push_back to _msfc
-  // printf("=====push to _msfc======\n");
-  // printf("total %d MSFC\n", msfcIndex);
   vector<vector<Abc_Obj_t*> > _msfc(msfcIndex);
   map<Abc_Obj_t*, int>::iterator it;
   for (it = _msfcMap.begin(); it != _msfcMap.end(); it++) {
     if (it->second == -1) { printf("something wrong!! %s\n", Abc_ObjName(_msfc[i][j])); }
     if (!Abc_ObjIsPi(it->first) && !Abc_ObjIsPo(it->first)) {
-      // printf("Object Id = %d, name = %s, index = %d\n", Abc_ObjId(it->first), Abc_ObjName(it->first), it->second);
       _msfc[it->second].push_back(it->first);  
     }
   }
 
   // sort _msfc by Abc_ObjId() twice
-  // printf("=====sort _msfc======\n");
   for (i = 0; i < _msfc.size(); i++) {
-    // printf("_msfc[%d] size: %d\n", i, _msfc[i].size());
     sort(_msfc[i].begin(), _msfc[i].end(), sortrow);
   }
-  // printf("_msfc size: %d\n", _msfc.size());
   sort(_msfc.begin(), _msfc.end(), sortcol);
   
-  // print message
-  // printf("=====print _msfc======\n");
+  // output message
   for(i = 0; i < _msfc.size(); i++) {
     printf("MSFC %d: ", i);
     for(j = 0; j < _msfc[i].size()-1; j++) {
@@ -118,7 +101,6 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk) {
     }
     printf("%s\n", Abc_ObjName(_msfc[i][j]));
   }
-  // printf("=====End function======\n");
 }
 
 int Lsv_CommandPrintMSFC(Abc_Frame_t* pAbc, int argc, char** argv) {
