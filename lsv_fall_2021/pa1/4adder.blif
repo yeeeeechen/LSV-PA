@@ -1,7 +1,8 @@
 .model 4adder
 .inputs A B C D
 .outputs S
-.latch l1_in l2_in l1_out l2_out 0
+.latch l1_in l2_in 0
+.latch l1_out l2_out 0
 
 .subckt adder a=A b=B cin=C sum=S1 cout=C1
 .subckt adder a=C1 b=d cin=l1_in sum=S2 cout=l1_out

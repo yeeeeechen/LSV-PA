@@ -47,6 +47,10 @@ void msfc_traversal(Abc_Obj_t *pObj ,std::vector<Abc_Obj_t*>& vec, std::vector<A
       flag[pFanin] = -1;
       tmp.push_back(pFanin);
     }
+    // if(pFanin->Type == ABC_OBJ_CONST1) {
+    //   flag[pFanin] = -1;
+    //   tmp.push_back(pFanin);
+    // }
   }
   for(int i=tmp.size()-1; i>-1; --i) {
     vec.push_back(tmp[i]); 
@@ -61,6 +65,10 @@ bool msfccompare(std::vector<Abc_Obj_t*>& a, std::vector<Abc_Obj_t*>&  b) {
     return Abc_ObjId(a[a.size()-1]) < Abc_ObjId(b[b.size()-1]); 
 }
 
+bool Obj_cmp(Abc_Obj_t*& a, Abc_Obj_t*& b) {
+    return Abc_ObjId(a) > Abc_ObjId(b);
+}
+
 void Lsv_NtkPrintMsfc(Abc_Ntk_t* pNtk) {
   Abc_Obj_t *pObj, *tmp_Obj;
   int i = 0;
@@ -70,7 +78,11 @@ void Lsv_NtkPrintMsfc(Abc_Ntk_t* pNtk) {
   std::vector<std::vector<Abc_Obj_t*>> msfc;
   std::vector<Abc_Obj_t*>::iterator iter;
   Abc_NtkForEachObj(pNtk, pObj, i){
-    if(Abc_ObjIsNode(pObj) || pObj->Type == ABC_OBJ_CONST1) {
+    if(pObj->Type == ABC_OBJ_CONST1 && Abc_ObjFanoutNum(pObj) != 0) {
+      Ids.push_back(pObj);
+      flag[pObj] = 0;
+    }
+    else if(Abc_ObjIsNode(pObj)) {
       Ids.push_back(pObj);
       flag[pObj] = 0;
     } 
@@ -84,6 +96,7 @@ void Lsv_NtkPrintMsfc(Abc_Ntk_t* pNtk) {
       flag[tmp_Obj] = -1;
       vec.push_back(tmp_Obj);
       msfc_traversal(tmp_Obj, vec, Ids, flag);
+      std::sort(vec.begin(), vec.end(), Obj_cmp);
       msfc.push_back(vec);
       vec.clear();
     }
