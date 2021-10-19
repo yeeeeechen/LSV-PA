@@ -156,7 +156,11 @@ void Lsv_NtkPrintMsfc( Abc_Ntk_t* pNtk )
 	{
 		printf("MSFC %d: ", j );
 		Vec_PtrForEachEntry( Abc_Obj_t*, pList, pNode, i )
-			printf( "%s ", Abc_ObjName(pNode) );
+		{
+			if ( i == 0 ) printf( "%s", Abc_ObjName(pNode) );
+			else printf( ",%s", Abc_ObjName(pNode) );
+		}
+		
 		printf("\n");
 	}
 
