@@ -1,7 +1,6 @@
 #include "base/abc/abc.h"
 #include "base/main/main.h"
 #include "base/main/mainInt.h"
-
 #include "vector"
 #include "set"
 #include "queue"
@@ -44,26 +43,39 @@ struct PackageRegistrationManager {
 
 void Lsv_NtkMSFC(Abc_Ntk_t* pNtk) {
     Abc_Obj_t* pPo;
+	Abc_Obj_t* pFan;
     int i;
     queue<Abc_Obj_t*> root;
     set<set<Abc_Obj_t*, obj_comparator>*, obj_set_comparator> msfc_list;
     set<Abc_Obj_t*> traversed;
-    Abc_NtkForEachNode( pNtk, pPo, i ) 
+	/*
+    Abc_NtkForEachObj( pNtk, pPo, i ) 
     {
 		if(!Abc_ObjIsPi(pPo)&&!Abc_ObjIsPo(pPo))
 		{
-			if((Abc_ObjFanoutNum(pPo) >1)||(Abc_ObjFanoutNum(pPo) == 0))
+			if(((Abc_ObjFanoutNum(pPo) >1)||(Abc_ObjFanoutNum(pPo) <= 0))&&( Abc_ObjIsNode(pPo) ))
 			{
 				root.push(pPo);
 				traversed.insert(pPo);
 			}
-			else if(Abc_ObjIsPo(Abc_ObjFanout0(pPo)))
+			else if((Abc_ObjIsPo(Abc_ObjFanout0(pPo)))&&( Abc_ObjIsNode(pPo)))
 			{				
 				root.push(pPo);
 				traversed.insert(pPo);
 			}
 		}
-    }
+    }*/
+	Abc_NtkForEachPo( pNtk, pPo, i )
+	{
+		int j;
+		traversed.insert(pPo);
+		Abc_ObjForEachFanin(pPo, pFan, j)
+		if(traversed.find(pFan) == traversed.end())
+		{
+			root.push(pFan);
+			traversed.insert(pFan);
+		}
+	} 
 	while(root.size() > 0)
 	{
 		Abc_Obj_t* pFanin;
@@ -78,7 +90,7 @@ void Lsv_NtkMSFC(Abc_Ntk_t* pNtk) {
 			track.pop();
 			Abc_ObjForEachFanin(current_node, pFanin, k)
 			{
-				if((traversed.find(pFanin)==traversed.end())&&(Abc_ObjIsNode(pFanin)))
+				if((traversed.find(pFanin)==traversed.end()))
 				{
 					traversed.insert(pFanin);
 					if(!Abc_ObjIsPi(pFanin))
@@ -87,6 +99,10 @@ void Lsv_NtkMSFC(Abc_Ntk_t* pNtk) {
 						{
 							track_list->insert(pFanin);
 							track.push(pFanin);
+						}
+						else
+						{
+							root.push(pFanin);
 						}
 					}
 				}
@@ -115,6 +131,11 @@ void Lsv_NtkMSFC(Abc_Ntk_t* pNtk) {
 		cout << endl;
 		counter++;
 	}
+	for(auto x=msfc_list.begin(); x!=msfc_list.end(); ++x)
+	{
+		delete (*x);
+	}
+	
 
 }
 
