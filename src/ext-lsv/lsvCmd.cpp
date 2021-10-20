@@ -3,7 +3,7 @@
 #include "base/abc/abc.h"
 #include "base/main/main.h"
 #include "base/main/mainInt.h"
-
+#define Abc_NtkForEachNode_pa1(pNtk,pNode,i) for ( i = 0; (i < Vec_PtrSize((pNtk)->vObjs)) && (((pNode) = Abc_NtkObj(pNtk, i)), 1); i++ ) if ( (pNode) == NULL || (!Abc_ObjIsNode(pNode) &&!(pNode->Type == ABC_OBJ_CONST1) )) {} else
 
 //read ./lsv_fall_2021/pa1/4bitadder_s.blif 
 //strash
@@ -63,11 +63,12 @@ class Mfsc_set{
   void sort(){std::sort(mfscset.begin(),mfscset.end());}
   void show(int i){
     
-    printf(" set : %d",i);
+    printf("MSFC %d: ",i);
     for(int i=0;i<mfscset.size();++i){
-      printf (" n%d ",mfscset[i]);
+      if(i!=0)printf(",");
+      printf ("n%d",mfscset[i]);
     }
-    printf (" end\n");
+    printf ("\n");
   }
   bool mark;
   private:
@@ -127,9 +128,9 @@ void Lsv_NtkPrint_msfc(Abc_Ntk_t* pNtk) {
     total.push_back(nullptr);
   }
   // init  :for each  node -> set
-  Abc_NtkForEachNode(pNtk, pObj, i) {
+  Abc_NtkForEachNode_pa1(pNtk, pObj, i) {
     int thisid=Abc_ObjId(pObj);
-    printf("Object Id = %d, name = %s\n", Abc_ObjId(pObj), Abc_ObjName(pObj));
+    //printf("Object Id = %d, name = %s\n", Abc_ObjId(pObj), Abc_ObjName(pObj));
     total[thisid]=new Mfsc_set(Abc_ObjId(pObj));
     /*
     Abc_Obj_t* pFanin;
@@ -144,16 +145,19 @@ void Lsv_NtkPrint_msfc(Abc_Ntk_t* pNtk) {
   
   }
   // start merging mfsc set
-  Abc_NtkForEachNode(pNtk, pObj, i) {
-    printf("Object Id = %d, name = %s\n", Abc_ObjId(pObj), Abc_ObjName(pObj));
+  Abc_NtkForEachNode_pa1(pNtk, pObj, i) {
+    //printf("Object Id = %d, name = %s\n", Abc_ObjId(pObj), Abc_ObjName(pObj));
     int thisid=Abc_ObjId(pObj);
     int j;
     //Abc_ObjForEachFanout
     Abc_Obj_t* pFanout;
+    if(Abc_ObjFanoutNum(pObj)==0){
+      total[thisid]->mark=true;
+    }
     if(Abc_ObjFanoutNum(pObj)>1)continue;
     Abc_ObjForEachFanout(pObj, pFanout, j){
-      if(Abc_ObjType(pFanout)!=7)
-      {printf("Object Id = %d not node\n",Abc_ObjId(pFanout));
+      if(Abc_ObjType(pFanout)!=7  )
+      {//printf("Object Id = %d not node\n",Abc_ObjId(pFanout));
       continue;
       }
       Mfsc_set::merge(total[thisid],total[Abc_ObjId(pFanout)],total);
@@ -167,7 +171,7 @@ void Lsv_NtkPrint_msfc(Abc_Ntk_t* pNtk) {
   for(int i=0;i<total.size();++i){
     if(total[i]==nullptr ||total[i]->mark)continue;
     total[i]->sort();
-    total[i]->show(i);
+   // total[i]->show(i);
     finalset.push_back(total[i]);
     total[i]->mark=true;
   }
@@ -177,7 +181,7 @@ void Lsv_NtkPrint_msfc(Abc_Ntk_t* pNtk) {
   for(int i=0;i<finalset.size();++i){
     finalset[i]->show(i);
   }
-  printf("end\n");
+  //printf("end\n");
 }
 int Lsv_CommandPrint_msfc(Abc_Frame_t* pAbc, int argc, char** argv) {
   Abc_Ntk_t* pNtk = Abc_FrameReadNtk(pAbc);
