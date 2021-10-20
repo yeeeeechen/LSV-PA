@@ -1,0 +1,6 @@
+MSFC 0: n8,n9,n10
+MSFC 1: n11
+MSFC 2: n12
+MSFC 3: n13
+MSFC 4: n14,n15,n16,n17,n18,n19,n20
+MSFC 5: n21,n22
