@@ -86,7 +86,7 @@ void Lsv_NtkPrintMsfc( Abc_Ntk_t* pNtk )
 	Vec_Ptr_t* pList;
 	Vec_Ptr_t* pCheck;
 
-	pHeads = Vec_VecAlloc(8);
+	pHeads = Vec_VecAlloc(0);
 	pCheck = Vec_PtrAlloc(8);
 
 	Abc_NtkForEachNode( pNtk, pNode, i )
@@ -95,15 +95,22 @@ void Lsv_NtkPrintMsfc( Abc_Ntk_t* pNtk )
  	Abc_NtkForEachPo( pNtk, pObj, i )
   	{
 		pNode = Abc_ObjFanin0(pObj);
-		pNode -> iTemp = 1;
-		Vec_VecPush(pHeads, Vec_VecSize(pHeads), pNode );
+		if (  !Abc_ObjIsPi( pNode ) && pNode -> iTemp == 0 )
+		{
+			pNode -> iTemp = 1;
+			Vec_VecPush(pHeads, Vec_VecSize(pHeads), pNode );
+			// printf( "node %d pushed to list %d\n", Abc_ObjId(pNode), Vec_VecSize(pHeads)-1 );
+		}
   	}
+	// printf( "total heads from po: %d\n", Vec_VecSize(pHeads) );
 
 	int idx = 0;
 
   	while( idx < Vec_VecSize( pHeads ) )
   	{
 		pList = Vec_VecEntry( pHeads, idx );
+		// printf( "list %d have size %d\n", idx, Vec_PtrSize( pList ) );
+
 		pNode = (Abc_Obj_t*)Vec_PtrEntry( pList, 0 );
 
 		Vec_PtrPush( pCheck, pNode );
@@ -116,7 +123,7 @@ void Lsv_NtkPrintMsfc( Abc_Ntk_t* pNtk )
 			// else if iTemp = 0, set iTemp to 1 and add to heads
 			Abc_ObjForEachFanin( pNode, pFanin, i )
 			{
-				if ( pFanin && ! Abc_ObjIsPi( pFanin) )
+				if ( pFanin && ! Abc_ObjIsPi( pFanin ) )
 				{
 					if ( Abc_ObjFanoutNum( pFanin ) == 1 )
 					{
@@ -126,9 +133,8 @@ void Lsv_NtkPrintMsfc( Abc_Ntk_t* pNtk )
 					else if ( pFanin -> iTemp == 0 )
 					{
 						pFanin -> iTemp = 1;
-						Vec_VecExpand( pHeads, 1 );
 						Vec_VecPush(pHeads, Vec_VecSize(pHeads), pFanin );
-						// printf("new head: %d\n", Abc_ObjId( pFanin) );
+						// printf("new %d head: %d\n", Vec_VecSize(pHeads)-1 ,Abc_ObjId( pFanin) );
 						// Vec_PtrPush( Vec_VecEntry(pHeads, Vec_VecSize(pHeads)-1), pNode );
 					}
 				}
