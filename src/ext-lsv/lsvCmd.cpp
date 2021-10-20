@@ -142,11 +142,12 @@ void Lsv_NtkPrintMsfc(Abc_Ntk_t* pNtk) {
     vector<NODE*> msfc_list;
     Abc_Obj_t* pFanout;
     int j;
-    if(Abc_ObjFanoutNum(pObj)>1 && !Abc_ObjIsPi(pObj) && !Abc_ObjIsPo(pObj)) push_back_ALLSTAR(MSFC_ALLSTAR,msfc_list,pObj);
-    else if(Abc_ObjType(pObj) == ABC_OBJ_CONST1 && Abc_ObjFanoutNum(pObj)>=1 )push_back_ALLSTAR(MSFC_ALLSTAR,msfc_list,pObj);
-    else if(!Abc_ObjIsPi(pObj) && !Abc_ObjIsPo(pObj)){
-      Abc_ObjForEachFanout(pObj,pFanout,j){
-	      if(Abc_ObjIsPo(pFanout))push_back_ALLSTAR(MSFC_ALLSTAR,msfc_list,pObj);
+    if(Abc_ObjIsNode(pObj)|| Abc_ObjType(pObj) == ABC_OBJ_CONST1){
+      if(Abc_ObjFanoutNum(pObj)>1) push_back_ALLSTAR(MSFC_ALLSTAR,msfc_list,pObj);
+      else{
+        Abc_ObjForEachFanout(pObj,pFanout,j){
+	        if(Abc_ObjIsPo(pFanout))push_back_ALLSTAR(MSFC_ALLSTAR,msfc_list,pObj);
+        }
       }
     }
   }
