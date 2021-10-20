@@ -70,7 +70,7 @@ void Lsv_NtkMSFC(Abc_Ntk_t* pNtk) {
 		int j;
 		traversed.insert(pPo);
 		Abc_ObjForEachFanin(pPo, pFan, j)
-		if(traversed.find(pFan) == traversed.end())
+		if((traversed.find(pFan) == traversed.end())&&(!Abc_ObjIsPi(pFan)))
 		{
 			root.push(pFan);
 			traversed.insert(pFan);
@@ -95,7 +95,7 @@ void Lsv_NtkMSFC(Abc_Ntk_t* pNtk) {
 					traversed.insert(pFanin);
 					if(!Abc_ObjIsPi(pFanin))
 					{
-						if(Abc_ObjFanoutNum(pFanin) == 1)
+						if((Abc_ObjFanoutNum(pFanin) == 1))
 						{
 							track_list->insert(pFanin);
 							track.push(pFanin);
