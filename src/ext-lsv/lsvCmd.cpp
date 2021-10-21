@@ -35,26 +35,35 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk){
   map<int,vector<Abc_Obj_t*>> msfc;
 
 
-  Abc_NtkForEachNode(pNtk, pObj, i){
-    Abc_Obj_t* tmp=pObj;
-    while(Abc_ObjFanoutNum(tmp)==1 and !Abc_ObjIsPo(Abc_ObjFanout0(tmp))){
-      tmp=Abc_ObjFanout0(tmp);
+  Abc_NtkForEachObj(pNtk, pObj, i){
+    if(pObj->Type == ABC_OBJ_CONST1 && Abc_ObjFanoutNum(pObj) != 0) {
+      msfc[Abc_ObjId(pObj)].push_back(pObj);
+    }else if(Abc_ObjIsNode(pObj)){
+      Abc_Obj_t* tmp=pObj;
+      while(Abc_ObjFanoutNum(tmp)==1 and !Abc_ObjIsPo(Abc_ObjFanout0(tmp))){
+        tmp=Abc_ObjFanout0(tmp);
+      }
+      msfc[Abc_ObjId(tmp)].push_back(pObj);
     }
-    msfc[Abc_ObjId(tmp)].push_back(pObj);
+    
+    
   }
+
+  
   int ind=0;
   vector<vector<Abc_Obj_t*>> sort_map;
   for(auto msfcnode:msfc){
     sort_map.push_back(msfcnode.second);
   }
   sort(sort_map.begin(),sort_map.end(),comp);
+
   for(auto msfcnode:sort_map){
     cout << "MSFC " << ind << ":";
-    cout << " n" << Abc_ObjId(msfcnode[0]);
+    cout << " " << Abc_ObjName(msfcnode[0]);
     for(int j=1;j<msfcnode.size();++j){
-      cout << ",n" << Abc_ObjId(msfcnode[j]);
+      cout << "," << Abc_ObjName(msfcnode[j]);
     }
-    cout << "\n";
+    cout <<endl;
     ind++;
   }
 }
