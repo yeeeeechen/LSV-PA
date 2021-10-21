@@ -61,73 +61,97 @@ usage:
   return 1;
 }
 
-void Lsv_NodeMfscCone_rec(Abc_Obj_t* pNode, Vec_Ptr_t* vCone, int fTopmost) {
+// sort method used by Vec_PtrSort
+static int Vec_PtrSortCompareObjIds( void ** pp1, void ** pp2 ) {   
+    Abc_Obj_t* pObj1 = (Abc_Obj_t*) *pp1;
+    Abc_Obj_t* pObj2 = (Abc_Obj_t*) *pp2;
+    
+    if ( Abc_ObjId(pObj1) < Abc_ObjId(pObj2) )
+        return -1;
+    if ( Abc_ObjId(pObj1) > Abc_ObjId(pObj2) ) 
+        return 1;
+    return 0; 
+}
+
+static int Vec_PtrSortCompareFirstObjIdInCone( void ** pp1, void ** pp2 ) {   
+    Abc_Obj_t* pObj1 = (Abc_Obj_t*) Vec_PtrEntry((Vec_Ptr_t*) *pp1, 0);
+    Abc_Obj_t* pObj2 = (Abc_Obj_t*) Vec_PtrEntry((Vec_Ptr_t*) *pp2, 0);
+    if ( Abc_ObjId(pObj1) < Abc_ObjId(pObj2) )
+        return -1;
+    if ( Abc_ObjId(pObj1) > Abc_ObjId(pObj2) ) 
+        return 1;
+    return 0; 
+}
+
+void Lsv_NodeMfsc_rec(Abc_Obj_t* pNode, Vec_Ptr_t* vIterateList, Vec_Ptr_t* vCone, int fTopmost) {
     Abc_Obj_t* pFanin;
     int i;
 
-    if (Abc_NodeIsTravIdCurrent(pNode)) {
+    if (Abc_NodeIsTravIdCurrent(pNode) || pNode->fMarkA == 1) {
         return;
     }
     Abc_NodeSetTravIdCurrent(pNode);
 
-    if (!fTopmost && (Abc_ObjIsCi(pNode) || pNode->vFanouts.nSize > 1)) {
+    if (Abc_ObjIsCi(pNode)) {
+        return;
+    }
+    if (!fTopmost && Abc_ObjFanoutNum(pNode) > 1) {
+        Vec_PtrPush(vIterateList, pNode);
         return;
     }
 
     Abc_ObjForEachFanin(pNode, pFanin, i) {
-        Lsv_NodeMfscCone_rec(pFanin, vCone, 0);
+        Lsv_NodeMfsc_rec(pFanin, vIterateList, vCone, 0);
     }
     //
-    if (vCone) Vec_PtrPush(vCone, pNode);
+    if (vCone && !Abc_ObjIsCo(pNode)) Vec_PtrPush(vCone, pNode);
+    pNode->fMarkA = 1; 
 }
 
-void Lsv_NodeMsfcCone(Abc_Obj_t* pNode, Vec_Ptr_t* vCone) {
-    //compute MSFC and store them in vCone
-    assert(Abc_ObjIsNode(pNode) || Abc_ObjIsPo(pNode));
+void Lsv_NodeMsfc(Abc_Obj_t* pNode, Vec_Ptr_t* vIterateList, Vec_Ptr_t* vCone) {
+    // compute MSFC and store them in vCone
     assert(!Abc_ObjIsComplement(pNode));
     if (vCone) Vec_PtrClear(vCone);
     Abc_NtkIncrementTravId(pNode->pNtk);
-    Lsv_NodeMfscCone_rec(pNode, vCone, 1);
+    Lsv_NodeMfsc_rec(pNode, vIterateList, vCone, 1);
 }
 
-void Lsv_NodeMfscConePrint(Abc_Obj_t* pNode) {
-    Vec_Ptr_t* vCone;
-    Abc_Obj_t* pObj; 
+void Lsv_NtkMsfc(Abc_Ntk_t* pNtk, Vec_Ptr_t* vMsfc) {
+    Abc_Obj_t* pObj;
+    Vec_Ptr_t* vObj = Vec_PtrAlloc(50);
     int i;
-    vCone = Vec_PtrAlloc(100);
-    Abc_NodeDeref_rec(pNode);
-    Lsv_NodeMsfcCone(pNode, vCone);
-    Abc_NodeRef_rec(pNode);
-    //TODO: Sort the nodes in cone (how?)
-    Vec_PtrForEachEntry(Abc_Obj_t*, vCone, pObj, i) {
-        printf("%s", Abc_ObjName(pObj));
-        if (i != vCone->nSize - 1) {
-            printf(",");
+    Abc_NtkForEachCo(pNtk, pObj, i) {
+        Vec_PtrPush(vObj, pObj);
+    }
+    Vec_PtrForEachEntry(Abc_Obj_t*, vObj, pObj, i) {
+        Vec_Ptr_t* vCone = Vec_PtrAlloc(100);
+        Lsv_NodeMsfc(pObj, vObj, vCone);
+        Vec_PtrSort(vCone, (int (*)(const void *, const void *)) Vec_PtrSortCompareObjIds);
+        if (Vec_PtrSize(vCone) > 0) {
+            Vec_PtrPush(vMsfc, (void*)vCone);
         }
     }
-    printf("\n");
+
+    Vec_PtrSort(vMsfc, (int (*)(const void *, const void *)) Vec_PtrSortCompareFirstObjIdInCone);
 }
 
 void Lsv_NtkPrintMsfc(Abc_Ntk_t* pNtk) {
+    Vec_Ptr_t* vMsfc = Vec_PtrAlloc(100), *pOneMsfc;
+
     Abc_Obj_t* pObj;
-    int i = 0, j;
-    Abc_NtkForEachObj(pNtk, pObj, j) {
-        /*  Output Reference
-            MSFC 0: n8,n9,n10
-            MSFC 1: n11
-            MSFC 2: n12
-            MSFC 3: n13,n14,n15,n17,n18,n19,n20
-            MSFC 4: n16
-            MSFC 5: n21,n22,n23,n24
-        */
+    int i, j;
+    Lsv_NtkMsfc(pNtk, vMsfc);
+    Vec_PtrForEachEntry(Vec_Ptr_t*, vMsfc, pOneMsfc, i) {
         printf("MSFC %d: ", i);
-        if (pObj->vFanins.nSize > 1 || Abc_ObjIsPo(pObj)) {
+        Vec_PtrForEachEntry(Abc_Obj_t*, pOneMsfc, pObj, j) {
             printf("%s", Abc_ObjName(pObj));
-            Lsv_NodeMfscConePrint(pObj);
-            i++;
+            if (j != pOneMsfc->nSize - 1) {
+                printf(",");
+            }
         }
+        printf("\n");
     }
-    
+    Abc_NtkCleanMarkA(pNtk);
 }
 
 int Lsv_CommandPrintMsfc(Abc_Frame_t* pAbc, int argc, char** argv) {
