@@ -7,22 +7,22 @@
 #include "sat/bsat/satSolver.h"
 #include <vector>
 
-static int Lsv_CommandPrintNodes(Abc_Frame_t* pAbc, int argc, char** argv);
+static int Lsv_CommandPrintMSFC(Abc_Frame_t* pAbc, int argc, char** argv);
 
-void init(Abc_Frame_t* pAbc) {
-  Cmd_CommandAdd(pAbc, "LSV", "lsv_print_msfc", Lsv_CommandPrintNodes, 0);
+void init_msfc(Abc_Frame_t* pAbc) {
+  Cmd_CommandAdd(pAbc, "LSV", "lsv_print_msfc", Lsv_CommandPrintMSFC, 0);
 }
 
-void destroy(Abc_Frame_t* pAbc) {}
+void destroy_msfc(Abc_Frame_t* pAbc) {}
 
-Abc_FrameInitializer_t frame_initializer = {init, destroy};
+Abc_FrameInitializer_t initializer = {init_msfc, destroy_msfc};
 
 struct PackageRegistrationManager {
-  PackageRegistrationManager() { Abc_FrameAddInitializer(&frame_initializer); }
-} lsvPackageRegistrationManager;
+  PackageRegistrationManager() { Abc_FrameAddInitializer(&initializer); }
+} lsvPackage;
 
 
-int Lsv_CommandPrintNodes(Abc_Frame_t* pAbc, int argc, char** argv) {
+int Lsv_CommandPrintMSFC(Abc_Frame_t* pAbc, int argc, char** argv) {
   Abc_Ntk_t* pNtk = Abc_FrameReadNtk(pAbc);
 
   /*if (pNtk -> Abc_NtkHasAig() == 0)
