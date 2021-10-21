@@ -83,7 +83,7 @@ int Lsv_CommandPrintMSFC(Abc_Frame_t* pAbc, int argc, char** argv) {
 
 usage:
   Abc_Print(-2, "usage: lsv_print_msfc [-h]\n");
-  Abc_Print(-2, "\t        prints the nodes in the network\n");
+  Abc_Print(-2, "\t        prints the msfc nodes in the network\n");
   Abc_Print(-2, "\t-h    : print the command usage\n");
   return 1;
 }
