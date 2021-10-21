@@ -29,6 +29,10 @@ bool compareByID (Abc_Obj_t* Obj1, Abc_Obj_t* Obj2){
   return (Abc_ObjId(Obj1) < Abc_ObjId(Obj2) );
 }
 
+bool compareByTreeID (vector<Abc_Obj_t*> tree1, vector<Abc_Obj_t*> tree2){
+  return (Abc_ObjId(tree1.front()) < Abc_ObjId(tree2.front()) );
+}
+
 int findMSFCLeaves(vector<Abc_Obj_t*> &msfc_nodes_vec, Abc_Obj_t* pObj, map<Abc_Obj_t*, int>& obj2vec, int& sortedNodeCount){ // find MSFC nodes recursively
   Abc_Obj_t* pFanin;
   int size = msfc_nodes_vec.size();
@@ -71,24 +75,27 @@ int findMSFCRoot(vector<Abc_Obj_t*> msfc_nodes_vec, Abc_Obj_t* pObj, map<Abc_Obj
 }
 
 void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk) {
-  vector<Abc_Obj_t*> p_msfc_nodes;  
   Abc_Obj_t* pObj;
+  vector<Abc_Obj_t*> p_msfc_nodes;  
+  vector<vector<Abc_Obj_t*> > msfc_trees; // stores SORTED msfc trees
   map<Abc_Obj_t*, int> obj2vec;
   int sortedNodeCount = 0;
   int msfcNodeCount = 0;
   int msfc_tree_index = 0;
-  int node_index;
+  int node_index = 0;
   int i = 0;
-  Abc_NtkForEachNode(pNtk, pObj, node_index) { // Loading all nodes to p_msfc_nodes
-    if ((Abc_ObjType(pObj) != ABC_OBJ_PO) && (Abc_ObjType(pObj) != ABC_OBJ_PI)){
+  // load all nodes, including Const1
+  for ( i = 0; (i < Vec_PtrSize((pNtk)->vObjs)) && (((pObj) = Abc_NtkObj(pNtk, i)), 1); i++ ){ 
+    if ( (pObj) != NULL && (Abc_ObjIsNode(pObj) || (pObj->Type == ABC_OBJ_CONST1 && Abc_ObjFanoutNum(pObj) != 0))) { 
       p_msfc_nodes.push_back(pObj);
-      obj2vec[pObj] = i;
-      i++;
+      obj2vec[pObj] = node_index;
+      node_index++;
     }
   }
   int totalNodeCount = p_msfc_nodes.size();
-  // cout<<"# of nodes in the AIG = "<<totalNodeCount<<"\n";
+  // if ((Abc_ObjFanoutNum(p_msfc_nodes.front()) == 1) || (Abc_ObjFanoutNum(p_msfc_nodes.front()) == 1)) p_msfc_nodes.erase(p_msfc_nodes.begin());
   while(sortedNodeCount < totalNodeCount){ // find an MSFC in the AIG
+    // printf("msfc_tree %d\n", msfc_tree_index); 
     /*
     for (i=0; i<totalNodeCount; i++){
       cout<<"p_msfc_nodes["<<i<<"] = "<< Abc_ObjName(p_msfc_nodes[i])<<"\n";
@@ -103,24 +110,39 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk) {
     msfcNodeCount = findMSFCLeaves(p_msfc_nodes, p_msfc_nodes[rootID], obj2vec, sortedNodeCount); 
     
     // Sort the nodes in the MSFC tree by ID
-    sort(p_msfc_nodes.begin(), p_msfc_nodes.end() - sortedNodeCount, compareByID);
+    // sort(p_msfc_nodes.begin(), p_msfc_nodes.end() - sortedNodeCount, compareByID);
     sort(p_msfc_nodes.end() - sortedNodeCount, p_msfc_nodes.end() - sortedNodeCount + msfcNodeCount, compareByID);
-    for (i=0; i<totalNodeCount; i++){
-      obj2vec[p_msfc_nodes[i]] = i;      
+    vector<Abc_Obj_t*> msfc_tree_temp;
+    for (i=0; i<msfcNodeCount; i++){
+      msfc_tree_temp.push_back(p_msfc_nodes[i + totalNodeCount - sortedNodeCount]);
+      obj2vec[p_msfc_nodes[i + totalNodeCount - sortedNodeCount]] = i + totalNodeCount - sortedNodeCount;      
     }
+    msfc_trees.push_back(msfc_tree_temp);
+    msfc_tree_temp.clear();
 
     // print out info
-    cout<<"MSFC "<<msfc_tree_index<<": ";
-    cout <<Abc_ObjName(p_msfc_nodes[totalNodeCount - sortedNodeCount]);
+    /*
+    printf("MSFC %d: %s", msfc_tree_index, Abc_ObjName(p_msfc_nodes[totalNodeCount - sortedNodeCount]));
     if (msfcNodeCount > 1){
       for (node_index = totalNodeCount - sortedNodeCount + 1; node_index <= totalNodeCount - sortedNodeCount + msfcNodeCount - 1; ++node_index){
-        cout <<",";
-        cout << Abc_ObjName(p_msfc_nodes[node_index]);
+        printf(",%s",Abc_ObjName(p_msfc_nodes[node_index]));
       }
     }
-    cout <<"\n";
+    printf("\n");
+    */
     msfc_tree_index++;
     msfcNodeCount=0;
+  }
+  // print out info
+  sort(msfc_trees.begin(), msfc_trees.end(), compareByTreeID);
+  for (int i=0; i < msfc_trees.size(); i++){
+    printf("MSFC %d: %s", i, Abc_ObjName(msfc_trees[i][0]));
+    if (msfc_trees[i].size() > 1){
+      for (int j=1; j < msfc_trees[i].size(); j++){
+        printf(",%s", Abc_ObjName(msfc_trees[i][j]));
+      }
+    }
+    printf("\n"); 
   }
 }
 
