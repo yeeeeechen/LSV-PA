@@ -87,10 +87,10 @@ void Lsv_NodeMfsc_rec(Abc_Obj_t* pNode, Vec_Ptr_t* vIterateList, Vec_Ptr_t* vCon
     Abc_Obj_t* pFanin;
     int i;
 
-    if (Abc_NodeIsTravIdCurrent(pNode) || pNode->fMarkA == 1) {
+    if (pNode->fMarkA == 1) {
         return;
     }
-    Abc_NodeSetTravIdCurrent(pNode);
+    // Abc_NodeSetTravIdCurrent(pNode);
 
     if (Abc_ObjIsCi(pNode)) {
         return;
@@ -112,7 +112,7 @@ void Lsv_NodeMsfc(Abc_Obj_t* pNode, Vec_Ptr_t* vIterateList, Vec_Ptr_t* vCone) {
     // compute MSFC and store them in vCone
     assert(!Abc_ObjIsComplement(pNode));
     if (vCone) Vec_PtrClear(vCone);
-    Abc_NtkIncrementTravId(pNode->pNtk);
+    // Abc_NtkIncrementTravId(pNode->pNtk);
     Lsv_NodeMfsc_rec(pNode, vIterateList, vCone, 1);
 }
 
