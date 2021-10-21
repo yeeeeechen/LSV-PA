@@ -1,11 +1,19 @@
 #include "base/abc/abc.h"
 #include "base/main/main.h"
 #include "base/main/mainInt.h"
+#include <vector>
+#include <algorithm>
+#include <iostream>
+#include <map>
+using namespace std;
+
 
 static int Lsv_CommandPrintNodes(Abc_Frame_t* pAbc, int argc, char** argv);
+static int Lsv_CommandPrintMSFC(Abc_Frame_t* pAbc, int argc, char** argv);
 
 void init(Abc_Frame_t* pAbc) {
   Cmd_CommandAdd(pAbc, "LSV", "lsv_print_nodes", Lsv_CommandPrintNodes, 0);
+  Cmd_CommandAdd(pAbc, "LSV", "lsv_print_msfc", Lsv_CommandPrintMSFC, 0);
 }
 
 void destroy(Abc_Frame_t* pAbc) {}
@@ -16,6 +24,73 @@ struct PackageRegistrationManager {
   PackageRegistrationManager() { Abc_FrameAddInitializer(&frame_initializer); }
 } lsvPackageRegistrationManager;
 
+//------------------------------------
+bool comp(vector<Abc_Obj_t*> a,vector<Abc_Obj_t*>b){
+  return Abc_ObjId(a[0])<Abc_ObjId(b[0]);
+}
+
+void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk){
+  Abc_Obj_t* pObj;
+  int i;
+  map<int,vector<Abc_Obj_t*>> msfc;
+
+
+  Abc_NtkForEachNode(pNtk, pObj, i){
+    Abc_Obj_t* tmp=pObj;
+    while(Abc_ObjFanoutNum(tmp)==1 and !Abc_ObjIsPo(Abc_ObjFanout0(tmp))){
+      tmp=Abc_ObjFanout0(tmp);
+    }
+    msfc[Abc_ObjId(tmp)].push_back(pObj);
+  }
+  int ind=0;
+  vector<vector<Abc_Obj_t*>> sort_map;
+  for(auto msfcnode:msfc){
+    sort_map.push_back(msfcnode.second);
+  }
+  sort(sort_map.begin(),sort_map.end(),comp);
+  for(auto msfcnode:sort_map){
+    cout << "MSFC " << ind << ":";
+    cout << " n" << Abc_ObjId(msfcnode[0]);
+    for(int j=1;j<msfcnode.size();++j){
+      cout << ",n" << Abc_ObjId(msfcnode[j]);
+    }
+    cout << "\n";
+    ind++;
+  }
+}
+
+
+
+
+int Lsv_CommandPrintMSFC(Abc_Frame_t* pAbc, int argc, char** argv) {
+  Abc_Ntk_t* pNtk = Abc_FrameReadNtk(pAbc);
+  int c;
+  Extra_UtilGetoptReset();
+  while ((c = Extra_UtilGetopt(argc, argv, "h")) != EOF) {
+    switch (c) {
+      case 'h':
+        goto usage;
+      default:
+        goto usage;
+    }
+  }
+  if (!pNtk) {
+    Abc_Print(-1, "Empty network.\n");
+    return 1;
+  }
+  Lsv_NtkPrintMSFC(pNtk);
+  return 0;
+
+usage:
+  Abc_Print(-2, "usage: lsv_print_msfc [-h]\n");
+  Abc_Print(-2, "\t        prints the nodes in the network\n");
+  Abc_Print(-2, "\t-h    : print the command usage\n");
+  return 1;
+}
+
+
+
+//--------------------------------------------------------
 void Lsv_NtkPrintNodes(Abc_Ntk_t* pNtk) {
   Abc_Obj_t* pObj;
   int i;
