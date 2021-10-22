@@ -117,7 +117,6 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk) {
     v_msfc.push_back(v_node);
   }
 
-
   for(i=0;i<v_msfc.size();++i){
   	sort(v_msfc[i].begin(), v_msfc[i].end());
   }
