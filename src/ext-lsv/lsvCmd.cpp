@@ -5,7 +5,6 @@
 #include <iostream>
 #include <algorithm>
 #include <string>
-using namespace std;
 
 static int Lsv_CommandPrintMsfc(Abc_Frame_t* pAbc, int argc, char** argv);
 
@@ -60,21 +59,12 @@ void Lsv_NtkPrintMsfc(Abc_Ntk_t* pNtk) {
     }
   }
 
-
-
   Abc_Obj_t* pPo;
   Abc_NtkForEachPo(pNtk, pPo, b){
     Abc_Obj_t* pFanin;
     Abc_ObjForEachFanin(pPo, pFanin, c) {
       store_head.push_back(Abc_ObjId(pFanin));
       store_traverse.push_back(false);
-    }
-  }
-
-  if (Abc_NtkLatchNum(pNtk) > 0){
-    Abc_Obj_t* pObj;
-    Abc_NtkForEachNode(pNtk, pObj, i) {
-    printf("Object Id = %d, name = %s, type = %d\n", Abc_ObjId(pObj), Abc_ObjName(pObj), Abc_ObjType(pObj));
     }
   }
 
