@@ -1,15 +1,15 @@
 #include "base/abc/abc.h"
 #include "base/main/main.h"
 #include "base/main/mainInt.h"
-#include<iostream>
+#include <iostream>
 #include <vector>
 #include <algorithm>
 using namespace std;
 
-static int Lsv_CommandPrintMSFC(Abc_Frame_t* pAbc, int argc, char** argv);
+static int Lsv_CommandPrintMsfc(Abc_Frame_t* pAbc, int argc, char** argv);
 
 void init(Abc_Frame_t* pAbc) {
-    Cmd_CommandAdd(pAbc, "LSV", "lsv_print_msfc", Lsv_CommandPrintMSFC, 0);
+    Cmd_CommandAdd(pAbc, "LSV", "lsv_print_msfc", Lsv_CommandPrintMsfc, 0);
 }
 
 void destroy(Abc_Frame_t* pAbc) {}
@@ -59,9 +59,6 @@ void Lsv_DfsMsfc(vector<vector<Abc_Obj_t*>*>* msfcs, vector<Abc_Obj_t*>* msfc, A
 
 }
 
-//foreachnode{
-// if fanout>1,cout Objname;
-//else id+travesal;do{id} while(fanout=1);print all ids;
 
 
 void Lsv_NtkPrintMsfc(Abc_Ntk_t* pNtk) {
@@ -101,7 +98,7 @@ void Lsv_NtkPrintMsfc(Abc_Ntk_t* pNtk) {
 
 
 
-    int Lsv_CommandPrintMSFC(Abc_Frame_t* pAbc, int argc, char** argv) {
+    int Lsv_CommandPrintMsfc(Abc_Frame_t* pAbc, int argc, char** argv) {
         Abc_Ntk_t* pNtk = Abc_FrameReadNtk(pAbc);
         int c;
         Extra_UtilGetoptReset();
