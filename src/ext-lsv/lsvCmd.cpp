@@ -111,7 +111,6 @@ void TRAVERSE(Abc_Ntk_t* pNtk, Abc_Obj_t* pNode, vector<Abc_Obj_t*>& cone, bool 
 void MSFC(Abc_Ntk_t* pNtk)
 {
     int i;
-    int j;
     Abc_Obj_t* P_init;
     Abc_Obj_t* Po;
     vector<vector<Abc_Obj_t*> > cones;
@@ -123,14 +122,14 @@ void MSFC(Abc_Ntk_t* pNtk)
         P_init -> fMarkB = 0;
     }
     
+	int j;
     // primary output
-    Abc_NtkForEachPo(pNtk, Po, j)
+    Abc_NtkForEachPo(pNtk, Po, i)
     {
         //printf("PO \n");
         Po -> fMarkA = 1;
         Abc_Obj_t* pFanin;
-        int k;
-        Abc_ObjForEachFanin(Po, pFanin, k)
+        Abc_ObjForEachFanin(Po, pFanin, j)
         {
             //printf("PI \n");
             vector<Abc_Obj_t*> cone;
@@ -139,15 +138,14 @@ void MSFC(Abc_Ntk_t* pNtk)
             cones.push_back(cone);
         }
     }
-    
+
     while(true)
     {
         // check if empty
         bool exist;
         exist = false;
         Abc_Obj_t* P_check;
-        int l;
-        Abc_NtkForEachNode(pNtk, P_check, l)
+        Abc_NtkForEachNode(pNtk, P_check, i)
         {
             if (P_check -> fMarkB == 1)
             {
@@ -159,8 +157,7 @@ void MSFC(Abc_Ntk_t* pNtk)
         
         // execute
         Abc_Obj_t* P_ite;
-        int m;
-        Abc_NtkForEachNode(pNtk, P_ite, m)
+        Abc_NtkForEachNode(pNtk, P_ite, i)
         {
             if (P_ite -> fMarkB == 1)
             {
@@ -174,23 +171,6 @@ void MSFC(Abc_Ntk_t* pNtk)
     
     sort(cones.begin(), cones.end(), compareVV);
     
-    int n1, n2, n3;
-    Abc_NtkForEachPo(pNtk, P_init, n1)
-    {
-        P_init -> fMarkA = 0;
-        P_init -> fMarkB = 0;
-    }
-    Abc_NtkForEachNode(pNtk, P_init, n2);\
-    {
-        P_init -> fMarkA = 0;
-        P_init -> fMarkB = 0;
-    }
-    Abc_NtkForEachPi(pNtk, P_init, n3)
-    {
-        P_init -> fMarkA = 0;
-        P_init -> fMarkB = 0;
-    }
-    
     int count_ans = 0;
     for (int k = 0 ; k < cones.size() ; ++k)
     {
@@ -202,6 +182,22 @@ void MSFC(Abc_Ntk_t* pNtk)
         else { printf(","); }
       }
       ++count_ans;
+    }
+
+    Abc_NtkForEachNode(pNtk, P_init, i)
+    {
+        P_init -> fMarkA = 0;
+        P_init -> fMarkB = 0;
+    }
+    Abc_NtkForEachPo(pNtk, P_init, i)
+    {
+        P_init -> fMarkA = 0;
+        P_init -> fMarkB = 0;
+    }
+    Abc_NtkForEachPi(pNtk, P_init, i)
+    {
+        P_init -> fMarkA = 0;
+        P_init -> fMarkB = 0;
     }
 }
 
