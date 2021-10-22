@@ -20,77 +20,59 @@ struct PackageRegistrationManager {
     PackageRegistrationManager() { Abc_FrameAddInitializer(&frame_initializer); }
 } lsvPackageRegistrationManager;
 
-int m=0;
-vector<int>a;
-int k=0;
-  Abc_Obj_t* DFS(Abc_Obj_t* pObj,int n){
+struct sort_msfc{
+	inline bool operator() (Abc_Obj_t* pObj1, Abc_Obj_t* pObj2){
+		return (Abc_ObjId(pObj1) < Abc_ObjId(pObj2));
+	}
+};
 
-        if(n==1 || n==0){
-            return pObj;
-        }
-        else if(Abc_ObjFaninNum(pObj)>1 && pObj->Type==ABC_OBJ_NODE && Abc_ObjFanoutNum(pObj)<=1){
-            for(int i=0;i<Abc_ObjFaninNum(pObj);i++){
-                if(Abc_ObjFanoutNum(Abc_ObjFanin(pObj,i))<=1 ){
-                    a.push_back(Abc_ObjId(pObj));
-                    a.push_back(Abc_ObjId(Abc_ObjFanin(pObj,i)));
-                    Abc_ObjFanin(pObj,i)->fPersist=1;
-                    DFS(Abc_ObjFanin(pObj,i),n-1);
-                }
-            }
-        }
-        else if(Abc_ObjFanoutNum(pObj)>1){
-            for(int i=0;i<Abc_ObjFaninNum(pObj);i++){
-                if(Abc_ObjFanin(pObj,i)->Type==ABC_OBJ_NODE && Abc_ObjFanoutNum(Abc_ObjFanin(pObj,i))<=1){
-                    if(i==0){
-                        m++;
-                        printf("\n");
-                        std::cout<<"MSFC: "<<m-1;
-                    }
-                    a.push_back(Abc_ObjId(Abc_ObjFanin(pObj,i)));
-                    DFS(Abc_ObjFanin(pObj,i),n-1);
-                }
-            }
-        }
-        return pObj;
-    }
+struct sort_msfcs{
+	inline bool operator() (vector<Abc_Obj_t*>* msfc1, vector<Abc_Obj_t*>* msfc2){
+		return (Abc_ObjId(msfc1->at(0)) < Abc_ObjId(msfc2->at(0)));
+	}
+};
+
 //foreachnode{
 // if fanout>1,cout Objname;
 //else id+travesal;do{id} while(fanout=1);print all ids;
 // }
 
-void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk) {
-    Abc_Obj_t* pObj;
-    int i;
-    int number=Abc_NtkNodeNum(pNtk);
-    Abc_NtkForEachNode(pNtk, pObj, i) {
-        if((Abc_ObjFanoutNum(pObj)>1 || Abc_ObjFanout0(pObj)->Type!=ABC_OBJ_NODE)  && pObj->fPersist==0 ){
+void Lsv_NtkPrintMsfc(Abc_Ntk_t* pNtk) {
+   vector<vector<Abc_Obj_t*>*>* msfcs = new vector<vector<Abc_Obj_t*>*>;
+  int i;
+  Abc_Obj_t* pPo;
+  Abc_NtkForEachPo(pNtk, pPo, i) {
+	int j;	
+  	Abc_Obj_t* pObjRoot;
+	Abc_ObjForEachFanin(pPo, pObjRoot, j){
+	  	if(pObjRoot->Type == ABC_OBJ_NODE || pObjRoot->Type == ABC_OBJ_CONST1){
+			if(pObjRoot->iTemp == 0)
+				Lsv_DfsMSFC(msfcs, nullptr, pObjRoot);
 
-            m++;
-            printf("\n");
-            if(Abc_ObjFanoutNum(pObj)>1){
-                std::cout<<"MSFC"<<m-1<<": "<<Abc_ObjName(pObj);
-            }
-            else{
-                std::cout<<"MSFC:"<<m-1;
-            }
-            DFS(pObj,pObj->Level);
-            a.erase(unique(a.begin(),a.end()),a.end());
-            sort(a.begin(),a.end());
-            for (int i = 0; i < a.size(); i++) {
-                if(i==a.size()-1){
-                    printf("n%d",a[i]);
-                }
-                else{
-                    printf("n%d,",a[i]);
-                }
+	  }
 
-            }
-            a.clear();
-        }
-        printf("\n");
-    }
+	}
+  }
+  for(i=0; i<msfcs->size(); i++){
+	sort(msfcs->at(i)->begin(), msfcs->at(i)->end(), sort_msfc());
+  }
+  sort(msfcs->begin(), msfcs->end(), sort_msfcs());
 
-  
+  for(i=0; i < msfcs->size(); i++){
+	printf("MSFC %d: ", i);
+	int j;
+	//printf("length : %d ", msfcs->at(i)->size());
+	for(j=0; j < msfcs->at(i)->size(); j++){
+		if(j == 0)
+			printf("%s", Abc_ObjName(msfcs->at(i)->at(j)));
+		else
+			printf(",%s", Abc_ObjName(msfcs->at(i)->at(j)));
+	}	
+	printf("\n");
+  } 
+}
+
+
 
     int Lsv_CommandPrintMSFC(Abc_Frame_t* pAbc, int argc, char** argv) {
         Abc_Ntk_t* pNtk = Abc_FrameReadNtk(pAbc);
@@ -113,7 +95,34 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk) {
 
         usage:
         Abc_Print(-2, "usage: lsv_print_msfc [-h]\n");
-        Abc_Print(-2, "\t        prints the nodes in the network\n");
+        Abc_Print(-2, "\t        prints the msfc in the network\n");
         Abc_Print(-2, "\t-h    : print the command usage\n");
         return 1;
     }
+
+void Lsv_DfsMsfc(vector<vector<Abc_Obj_t*>*>* msfcs, vector<Abc_Obj_t*>* msfc, Abc_Obj_t* pObjRoot){
+	int i;
+	if(msfc == nullptr){
+		msfc = new vector<Abc_Obj_t*>;
+		msfc->push_back(pObjRoot);
+		msfcs->push_back(msfc);
+	}
+	else{
+		msfc->push_back(pObjRoot);
+	}
+
+	pObjRoot->iTemp = 1;
+	Abc_Obj_t* pObj;
+	Abc_ObjForEachFanin(pObjRoot, pObj, i){
+	  	if(pObj->Type == ABC_OBJ_NODE || pObj->Type == ABC_OBJ_CONST1){
+			if(pObj->iTemp == 0){
+				if(Abc_ObjFanoutNum(pObj) == 1)
+					Lsv_DfsMsfc(msfcs, msfc, pObj);
+				else
+					Lsv_DfsMsfc(msfcs, nullptr, pObj);
+
+			}
+	  }
+	}
+
+}
