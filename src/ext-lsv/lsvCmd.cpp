@@ -174,17 +174,18 @@ void MSFC(Abc_Ntk_t* pNtk)
     
     sort(cones.begin(), cones.end(), compareVV);
     
-    Abc_NtkForEachPo(pNtk, P_init, i);
+    int n1, n2, n3;
+    Abc_NtkForEachPo(pNtk, P_init, n1)
     {
         P_init -> fMarkA = 0;
         P_init -> fMarkB = 0;
     }
-    Abc_NtkForEachNode(pNtk, P_init, i);
+    Abc_NtkForEachNode(pNtk, P_init, n2);\
     {
         P_init -> fMarkA = 0;
         P_init -> fMarkB = 0;
     }
-    Abc_NtkForEachPi(pNtk, P_init, i);
+    Abc_NtkForEachPi(pNtk, P_init, n3)
     {
         P_init -> fMarkA = 0;
         P_init -> fMarkB = 0;
