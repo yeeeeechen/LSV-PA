@@ -111,6 +111,7 @@ void TRAVERSE(Abc_Ntk_t* pNtk, Abc_Obj_t* pNode, vector<Abc_Obj_t*>& cone, bool 
 void MSFC(Abc_Ntk_t* pNtk)
 {
     int i;
+    int j;
     Abc_Obj_t* P_init;
     Abc_Obj_t* Po;
     vector<vector<Abc_Obj_t*> > cones;
@@ -123,12 +124,20 @@ void MSFC(Abc_Ntk_t* pNtk)
     }
     
     // primary output
-    Abc_NtkForEachPo(pNtk, Po, i)
+    Abc_NtkForEachPo(pNtk, Po, j)
     {
-        vector<Abc_Obj_t*> cone;
-        TRAVERSE(pNtk, Po, cone, true);
-        sort(cone.begin(), cone.end(), compareV);
-        cones.push_back(cone);
+        //printf("PO \n");
+        Po -> fMarkA = 1;
+        Abc_Obj_t* pFanin;
+        int k;
+        Abc_ObjForEachFanin(Po, pFanin, k)
+        {
+            //printf("PI \n");
+            vector<Abc_Obj_t*> cone;
+            TRAVERSE(pNtk, pFanin, cone, true);
+            sort(cone.begin(), cone.end(), compareV);
+            cones.push_back(cone);
+        }
     }
     
     while(true)
@@ -137,7 +146,8 @@ void MSFC(Abc_Ntk_t* pNtk)
         bool exist;
         exist = false;
         Abc_Obj_t* P_check;
-        Abc_NtkForEachNode(pNtk, P_check, i)
+        int l;
+        Abc_NtkForEachNode(pNtk, P_check, l)
         {
             if (P_check -> fMarkB == 1)
             {
@@ -149,7 +159,8 @@ void MSFC(Abc_Ntk_t* pNtk)
         
         // execute
         Abc_Obj_t* P_ite;
-        Abc_NtkForEachNode(pNtk, P_ite, i)
+        int m;
+        Abc_NtkForEachNode(pNtk, P_ite, m)
         {
             if (P_ite -> fMarkB == 1)
             {
@@ -162,6 +173,22 @@ void MSFC(Abc_Ntk_t* pNtk)
     }
     
     sort(cones.begin(), cones.end(), compareVV);
+    
+    Abc_NtkForEachPo(pNtk, P_init, i);
+    {
+        P_init -> fMarkA = 0;
+        P_init -> fMarkB = 0;
+    }
+    Abc_NtkForEachNode(pNtk, P_init, i);
+    {
+        P_init -> fMarkA = 0;
+        P_init -> fMarkB = 0;
+    }
+    Abc_NtkForEachPi(pNtk, P_init, i);
+    {
+        P_init -> fMarkA = 0;
+        P_init -> fMarkB = 0;
+    }
     
     int count_ans = 0;
     for (int k = 0 ; k < cones.size() ; ++k)

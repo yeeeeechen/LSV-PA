@@ -1,3 +1,3 @@
 Benchmark,Result
-lsv_fall_2021/pa1/adder.blif,Fail
-Score,0
+lsv_fall_2021/pa1/adder.blif,Pass
+Score,5
