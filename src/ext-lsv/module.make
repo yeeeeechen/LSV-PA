@@ -1,2 +1,2 @@
 SRC += \
-    src/ext_lsv/msfc.cpp
+    src/ext_lsv/lsvCmd.cpp
