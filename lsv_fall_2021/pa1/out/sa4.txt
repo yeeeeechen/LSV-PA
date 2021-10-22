@@ -1,0 +1,2 @@
+ABC command line: "dsec -n lsv_fall_2021/pa1/ref/sa4_ref.blif lsv_fall_2021/pa1/4adder.blif".
+
