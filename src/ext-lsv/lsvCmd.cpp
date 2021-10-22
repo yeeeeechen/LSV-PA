@@ -3,11 +3,11 @@
 #include "base/main/mainInt.h"
 
 static int Lsv_CommandPrintNodes(Abc_Frame_t* pAbc, int argc, char** argv);
-static int Lsv_CommandPrintMSFC (Abc_Frame_t* pAbc, int argc, char** argv);
+static int Lsv_CommandPrintMsfc(Abc_Frame_t* pAbc, int argc, char** argv);
 
 void init(Abc_Frame_t* pAbc) {
   Cmd_CommandAdd(pAbc, "LSV", "lsv_print_nodes", Lsv_CommandPrintNodes, 0);
-  Cmd_CommandAdd(pAbc, "LSV", "lsv_print_msfc", Lsv_CommandPrintMSFC, 0);
+  Cmd_CommandAdd(pAbc, "LSV", "lsv_print_msfc", Lsv_CommandPrintMsfc, 0);
 }
 
 void destroy(Abc_Frame_t* pAbc) {}
@@ -62,105 +62,102 @@ usage:
 }
 
 // compare using the obj Id, assuming vector of Abc_Obj_t*
-static int Lsv_VecPtrSortCompare1( void ** pp1, void ** pp2 )
-{
-  if ( Abc_ObjId( (Abc_Obj_t*)(*pp1) ) < Abc_ObjId( (Abc_Obj_t*)(*pp2) ) )
+static int Lsv_VecPtrSortCompare1( void ** pp1, void ** pp2 ) {
+  if ( Abc_ObjId((Abc_Obj_t*)(*pp1)) < Abc_ObjId((Abc_Obj_t*)(*pp2)))
     return -1;
-  if ( Abc_ObjId( (Abc_Obj_t*)(*pp1) ) > Abc_ObjId( (Abc_Obj_t*)(*pp2) ) ) 
+  if ( Abc_ObjId((Abc_Obj_t*)(*pp1)) > Abc_ObjId((Abc_Obj_t*)(*pp2))) 
     return 1;
   return 0; 
 }
 
 // compare using the first obj Id, assuming vector of (vector of Abc_Obj_t*)
-static int Lsv_VecPtrSortCompare2( void ** pp1, void ** pp2 )
-{
-  if( Abc_ObjId( (Abc_Obj_t*)Vec_PtrEntry( (Vec_Ptr_t*)(*pp1), 0) ) <
-      Abc_ObjId( (Abc_Obj_t*)Vec_PtrEntry( (Vec_Ptr_t*)(*pp2), 0) ) ){
+static int Lsv_VecPtrSortCompare2(void ** pp1, void ** pp2) {
+  if( Abc_ObjId((Abc_Obj_t*)Vec_PtrEntry((Vec_Ptr_t*)(*pp1), 0)) <
+      Abc_ObjId((Abc_Obj_t*)Vec_PtrEntry((Vec_Ptr_t*)(*pp2), 0))) {
     return -1;
   }
-  if( Abc_ObjId( (Abc_Obj_t*)Vec_PtrEntry( (Vec_Ptr_t*)(*pp1), 0) ) >
-      Abc_ObjId( (Abc_Obj_t*)Vec_PtrEntry( (Vec_Ptr_t*)(*pp2), 0) ) ){
+  if( Abc_ObjId((Abc_Obj_t*)Vec_PtrEntry((Vec_Ptr_t*)(*pp1), 0)) >
+      Abc_ObjId((Abc_Obj_t*)Vec_PtrEntry((Vec_Ptr_t*)(*pp2), 0))) {
     return 1;
   }
   return 0; 
 }
 
 
-void Lsv_AigMSFC_rec( Abc_Obj_t * pNode, Vec_Ptr_t * vNodes, Vec_Ptr_t* msfc, bool isRoot)
-{
+void Lsv_AigMsfc_rec(Abc_Obj_t * pNode, Vec_Ptr_t * vNodes, Vec_Ptr_t* msfc, bool isRoot) {
     Abc_Obj_t * pFanin;
     int i;
 
-    if ( Abc_NodeIsTravIdCurrent( pNode ) || pNode->fMarkA==1 ) { return; }
+    if ( Abc_NodeIsTravIdCurrent(pNode) || pNode->fMarkA==1) { return; }
     // mark the node as visited
-    Abc_NodeSetTravIdCurrent( pNode );
+    Abc_NodeSetTravIdCurrent(pNode);
     // skip the PI
-    if ( Abc_ObjIsCi(pNode) ){ return ;}
+    if (Abc_ObjIsCi(pNode)) { return ;}
     // push node with multiple fanout to the back of vNodes
-    if ( Abc_ObjFanoutNum(pNode) > 1 && !isRoot){
+    if (Abc_ObjFanoutNum(pNode) > 1 && !isRoot) {
       //printf("%s has %d fanout\n", Abc_ObjName(pNode), Abc_ObjFanoutNum(pNode));
       Vec_PtrPush(vNodes, pNode);
       return;
     }
 
     // visit the transitive fanin of the node
-    Abc_ObjForEachFanin( pNode, pFanin, i )
-      Lsv_AigMSFC_rec( pFanin, vNodes, msfc, 0);
+    Abc_ObjForEachFanin(pNode, pFanin, i)
+      Lsv_AigMsfc_rec(pFanin, vNodes, msfc, 0);
     // visit the equivalent nodes
     // if ( Abc_AigNodeIsChoice( pNode ) )
     //     for ( pFanin = (Abc_Obj_t *)pNode->pData; pFanin; pFanin = (Abc_Obj_t *)pFanin->pData )
     //         Abc_AigDfs_rec( pFanin, vNodes );
     // add the node after the fanins have been added
     if(Abc_ObjIsPo(pNode)) { return; }
-    Vec_PtrPush( msfc, pNode );
+    Vec_PtrPush(msfc, pNode);
     pNode->fMarkA = 1;
 }
 
-Vec_Ptr_t * Lsv_AigMSFC(Abc_Ntk_t * pNtk){
+Vec_Ptr_t * Lsv_AigMsfc(Abc_Ntk_t * pNtk) {
   Vec_Ptr_t * msfcVec;
   Vec_Ptr_t * vNodes;
   Abc_Obj_t * pNode;
   int i;
-  assert( Abc_NtkIsStrash(pNtk) );
-  Abc_NtkCleanMarkA( pNtk );                                                                         
+  assert(Abc_NtkIsStrash(pNtk));
+  Abc_NtkCleanMarkA(pNtk);
 
-  vNodes = Vec_PtrAlloc( 100 );
-  msfcVec = Vec_PtrAlloc( 100 );
+  vNodes = Vec_PtrAlloc(100);
+  msfcVec = Vec_PtrAlloc(100);
   // go through the PO nodes and call for each of them
-  Abc_NtkForEachCo( pNtk, pNode, i ) { Vec_PtrPush(vNodes, pNode); }
-  Vec_PtrForEachEntry( Abc_Obj_t*, vNodes, pNode, i ){
-    Abc_NtkIncrementTravId( pNtk );
+  Abc_NtkForEachCo(pNtk, pNode, i) {Vec_PtrPush(vNodes, pNode);}
+  Vec_PtrForEachEntry(Abc_Obj_t*, vNodes, pNode, i) {
+    Abc_NtkIncrementTravId(pNtk);
     Vec_Ptr_t * msfc = Vec_PtrAlloc(50);
     Lsv_AigMSFC_rec(pNode, vNodes, msfc, 1);
     Vec_PtrSort(msfc, (int (*)(const void *, const void *)) Lsv_VecPtrSortCompare1);
-    if( Vec_PtrSize(msfc)>0 )
+    if(Vec_PtrSize(msfc)>0)
       Vec_PtrPush(msfcVec, (void*)msfc);
   }
-  Abc_NtkCleanMarkA( pNtk ); 
+  Abc_NtkCleanMarkA(pNtk); 
   return msfcVec;
 }
 
-void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk){
+void Lsv_NtkPrintMsfc(Abc_Ntk_t* pNtk) {
   Vec_Ptr_t* msfcVec;
   Vec_Ptr_t* pVec;
   Abc_Obj_t* pNode;
   int i, j;
-  msfcVec = Lsv_AigMSFC(pNtk);
+  msfcVec = Lsv_AigMsfc(pNtk);
   Vec_PtrSort(msfcVec, (int (*)(const void *, const void *)) Lsv_VecPtrSortCompare2);
   // TODO print out
-  Vec_PtrForEachEntry( Vec_Ptr_t*, msfcVec, pVec, i ){
+  Vec_PtrForEachEntry(Vec_Ptr_t*, msfcVec, pVec, i) {
     printf("MSFC %d: ", i);
-    Vec_PtrForEachEntry( Abc_Obj_t*, pVec, pNode, j ){
+    Vec_PtrForEachEntry(Abc_Obj_t*, pVec, pNode, j) {
       printf("%s", Abc_ObjName(pNode));
-      if( j!=Vec_PtrSize(pVec)-1 ) printf(",");
+      if(j != Vec_PtrSize(pVec) - 1) printf(",");
     }
     printf("\n");
   }
 }
 
-int Lsv_CommandPrintMSFC(Abc_Frame_t* pAbc, int argc, char** argv) {
+int Lsv_CommandPrintMsfc(Abc_Frame_t* pAbc, int argc, char** argv) {
   Abc_Ntk_t* pNtk = Abc_FrameReadNtk(pAbc);
-  assert(  Abc_NtkIsStrash( pNtk ) );
+  assert(Abc_NtkIsStrash(pNtk));
   int c;
   Extra_UtilGetoptReset();
   while ((c = Extra_UtilGetopt(argc, argv, "h")) != EOF) {
@@ -175,7 +172,7 @@ int Lsv_CommandPrintMSFC(Abc_Frame_t* pAbc, int argc, char** argv) {
     Abc_Print(-1, "Empty network.\n");
     return 1;
   }
-  Lsv_NtkPrintMSFC(pNtk);
+  Lsv_NtkPrintMsfc(pNtk);
   return 0;
 
 usage:
