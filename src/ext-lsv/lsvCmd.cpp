@@ -3,11 +3,11 @@
 #include "base/main/mainInt.h"
 
 static int Lsv_CommandPrintNodes(Abc_Frame_t* pAbc, int argc, char** argv);
-static int Lsv_CommandPrintMsfc(Abc_Frame_t* pAbc, int argc, char** argv);
+static int Lsv_CommandPrintMSFC(Abc_Frame_t* pAbc, int argc, char** argv);
 
 void init(Abc_Frame_t* pAbc) {
   Cmd_CommandAdd(pAbc, "LSV", "lsv_print_nodes", Lsv_CommandPrintNodes, 0);
-  Cmd_CommandAdd(pAbc, "LSV", "lsv_print_msfc", Lsv_CommandPrintMsfc, 0);
+  Cmd_CommandAdd(pAbc, "LSV", "lsv_print_msfc", Lsv_CommandPrintMSFC, 0);
 }
 
 void destroy(Abc_Frame_t* pAbc) {}
@@ -84,7 +84,7 @@ static int Lsv_VecPtrSortCompare2(void ** pp1, void ** pp2) {
 }
 
 
-void Lsv_AigMsfc_rec(Abc_Obj_t * pNode, Vec_Ptr_t * vNodes, Vec_Ptr_t* msfc, bool isRoot) {
+void Lsv_AigMSFC_rec(Abc_Obj_t * pNode, Vec_Ptr_t * vNodes, Vec_Ptr_t* msfc, bool isRoot) {
     Abc_Obj_t * pFanin;
     int i;
 
@@ -102,7 +102,7 @@ void Lsv_AigMsfc_rec(Abc_Obj_t * pNode, Vec_Ptr_t * vNodes, Vec_Ptr_t* msfc, boo
 
     // visit the transitive fanin of the node
     Abc_ObjForEachFanin(pNode, pFanin, i)
-      Lsv_AigMsfc_rec(pFanin, vNodes, msfc, 0);
+      Lsv_AigMSFC_rec(pFanin, vNodes, msfc, 0);
     // visit the equivalent nodes
     // if ( Abc_AigNodeIsChoice( pNode ) )
     //     for ( pFanin = (Abc_Obj_t *)pNode->pData; pFanin; pFanin = (Abc_Obj_t *)pFanin->pData )
@@ -113,7 +113,7 @@ void Lsv_AigMsfc_rec(Abc_Obj_t * pNode, Vec_Ptr_t * vNodes, Vec_Ptr_t* msfc, boo
     pNode->fMarkA = 1;
 }
 
-Vec_Ptr_t * Lsv_AigMsfc(Abc_Ntk_t * pNtk) {
+Vec_Ptr_t * Lsv_AigMSFC(Abc_Ntk_t * pNtk) {
   Vec_Ptr_t * msfcVec;
   Vec_Ptr_t * vNodes;
   Abc_Obj_t * pNode;
@@ -137,14 +137,13 @@ Vec_Ptr_t * Lsv_AigMsfc(Abc_Ntk_t * pNtk) {
   return msfcVec;
 }
 
-void Lsv_NtkPrintMsfc(Abc_Ntk_t* pNtk) {
+void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk) {
   Vec_Ptr_t* msfcVec;
   Vec_Ptr_t* pVec;
   Abc_Obj_t* pNode;
   int i, j;
-  msfcVec = Lsv_AigMsfc(pNtk);
+  msfcVec = Lsv_AigMSFC(pNtk);
   Vec_PtrSort(msfcVec, (int (*)(const void *, const void *)) Lsv_VecPtrSortCompare2);
-  // TODO print out
   Vec_PtrForEachEntry(Vec_Ptr_t*, msfcVec, pVec, i) {
     printf("MSFC %d: ", i);
     Vec_PtrForEachEntry(Abc_Obj_t*, pVec, pNode, j) {
@@ -155,7 +154,7 @@ void Lsv_NtkPrintMsfc(Abc_Ntk_t* pNtk) {
   }
 }
 
-int Lsv_CommandPrintMsfc(Abc_Frame_t* pAbc, int argc, char** argv) {
+int Lsv_CommandPrintMSFC(Abc_Frame_t* pAbc, int argc, char** argv) {
   Abc_Ntk_t* pNtk = Abc_FrameReadNtk(pAbc);
   assert(Abc_NtkIsStrash(pNtk));
   int c;
@@ -172,7 +171,7 @@ int Lsv_CommandPrintMsfc(Abc_Frame_t* pAbc, int argc, char** argv) {
     Abc_Print(-1, "Empty network.\n");
     return 1;
   }
-  Lsv_NtkPrintMsfc(pNtk);
+  Lsv_NtkPrintMSFC(pNtk);
   return 0;
 
 usage:
@@ -181,3 +180,4 @@ usage:
   Abc_Print(-2, "\t-h    : print the command usage\n");
   return 1;
 }
+
