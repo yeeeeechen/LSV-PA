@@ -1,0 +1,32 @@
+.model 2bitadder
+.inputs A3 A0 B3 B0
+.outputs COUT S3 S0
+.subckt halfadder a=A0 b=B0 ss=S0 ccout=CARRY1
+.subckt fulladder a=A3 b=B3 cin=CARRY1 s=S3 cout=COUT
+.end
+
+.model fulladder
+.inputs a b cin
+.outputs s cout
+.names a b k
+10 1
+01 1
+.names k cin s
+10 1
+01 1
+.names a b cin cout
+11- 1
+1-1 1
+-11 1
+.end
+
+
+.model halfadder
+.inputs a b
+.outputs ss ccout
+.names a b ss
+10 1
+01 1
+.names a b ccout
+11 1
+.end
