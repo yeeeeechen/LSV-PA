@@ -20,13 +20,15 @@ struct PackageRegistrationManager {
     PackageRegistrationManager() { Abc_FrameAddInitializer(&frame_initializer); }
 } lsvPackageRegistrationManager;
 
-int m=0;vector<int>a;
+int m=0;
+vector<int>a;
 int k=0;
 
 //foreachnode{
 // if fanout>1,cout Objname;
 //else id+travesal;do{id} while(fanout=1);print all ids;
 // }
+
 void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk) {
     Abc_Obj_t* pObj;
     int i;
@@ -37,10 +39,10 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk) {
             m++;
             printf("\n");
             if(Abc_ObjFanoutNum(pObj)>1){
-                cout<<"MSFC"<<m-1<<": "<<Abc_ObjName(pObj);
+                std::cout<<"MSFC"<<m-1<<": "<<Abc_ObjName(pObj);
             }
             else{
-                cout<<"MSFC:"<<m-1;
+                std::cout<<"MSFC:"<<m-1;
             }
             DFS(pObj,pObj->Level);
             a.erase(unique(a.begin(),a.end()),a.end());
@@ -80,7 +82,7 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk) {
                     if(i==0){
                         m++;
                         printf("\n");
-                        cout<<"MSFC: "<<m-1;
+                        std::cout<<"MSFC: "<<m-1;
                     }
                     a.push_back(Abc_ObjId(Abc_ObjFanin(pObj,i)));
                     DFS(Abc_ObjFanin(pObj,i),n-1);
