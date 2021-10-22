@@ -1,11 +1,13 @@
 #include "base/abc/abc.h"
 #include "base/main/main.h"
 #include "base/main/mainInt.h"
-
+#include <vector>
+#include <algorithm>
+using namespace std;
 static int Lsv_CommandPrintNodes(Abc_Frame_t* pAbc, int argc, char** argv);
 
 void init(Abc_Frame_t* pAbc) {
-  Cmd_CommandAdd(pAbc, "LSV", "lsv_print_nodes", Lsv_CommandPrintNodes, 0);
+  Cmd_CommandAdd(pAbc, "LSV", "lsv_print_msfc", Lsv_CommandPrintNodes, 0);
 }
 
 void destroy(Abc_Frame_t* pAbc) {}
@@ -15,22 +17,70 @@ Abc_FrameInitializer_t frame_initializer = {init, destroy};
 struct PackageRegistrationManager {
   PackageRegistrationManager() { Abc_FrameAddInitializer(&frame_initializer); }
 } lsvPackageRegistrationManager;
+void recvisit(Abc_Obj_t* pObj,int count,vector <int>* a)
+{
+  for(int j=0;j<Abc_ObjFaninNum(pObj);j++)
+  {
+    if(Abc_ObjIsNode(Abc_ObjFanin(pObj,j))&&Abc_ObjFanoutNum(Abc_ObjFanin(pObj,j))==1)
+    {
+      a->push_back(Abc_ObjId(Abc_ObjFanin(pObj,j)));
+      recvisit(Abc_ObjFanin(pObj,j),count,a);
+    }
+  }
+}
+bool vcompare(vector<int>& a,vector<int>& b)
+{
+  return a[0]<b[0];
+}
 
 void Lsv_NtkPrintNodes(Abc_Ntk_t* pNtk) {
   Abc_Obj_t* pObj;
   int i;
-  Abc_NtkForEachNode(pNtk, pObj, i) {
-    printf("Object Id = %d, name = %s\n", Abc_ObjId(pObj), Abc_ObjName(pObj));
-    Abc_Obj_t* pFanin;
-    int j;
-    Abc_ObjForEachFanin(pObj, pFanin, j) {
-      printf("  Fanin-%d: Id = %d, name = %s\n", j, Abc_ObjId(pFanin),
-             Abc_ObjName(pFanin));
-    }
-    if (Abc_NtkHasSop(pNtk)) {
-      printf("The SOP of this node:\n%s", (char*)pObj->pData);
+  int count=0;
+  vector <vector <int> > a(Abc_NtkNodeNum(pNtk)+1);
+
+  if(Abc_ObjFanoutNum(Abc_NtkObj(pNtk,0))!=0)
+  {
+    if(Abc_ObjFanoutNum(Abc_NtkObj(pNtk,0))>1||(Abc_ObjIsPo(Abc_ObjFanout0(Abc_NtkObj(pNtk,0)))))
+    {
+      vector<int> c;
+      c.push_back(0);
+      a[count]=c;
+      count++;
     }
   }
+  
+  Abc_NtkForEachNode(pNtk, pObj, i){
+      if(Abc_ObjFanoutNum(pObj)>1||Abc_ObjIsPo(Abc_ObjFanout0(pObj)))
+      {
+        vector<int> c;
+        c.push_back(Abc_ObjId(pObj));
+        recvisit(pObj,count,&c);
+        a[count]=c;
+        count++;
+      }
+  }
+  for(int j=0;j<count;j++)
+  {
+    
+    sort(a[j].begin(),a[j].end());
+     
+  }
+  a.resize(count);
+  sort(a.begin(),a.end(),vcompare);
+  for(int j=0;j<count;j++)
+  {
+
+    printf("MSFC %d: ",j);
+    for(int n=0;n<a[j].size();n++)
+    {
+      if(n==0)
+        printf("n%d",a[j][0]);
+      else
+        printf(",n%d",a[j][n]);
+    }
+    printf("\n");
+  }  
 }
 
 int Lsv_CommandPrintNodes(Abc_Frame_t* pAbc, int argc, char** argv) {
