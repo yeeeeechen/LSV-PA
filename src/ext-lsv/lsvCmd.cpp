@@ -5,6 +5,7 @@
 #include <iostream>
 #include <algorithm>
 #include <string>
+using namespace std;
 
 static int Lsv_CommandPrintMsfc(Abc_Frame_t* pAbc, int argc, char** argv);
 
