@@ -23,7 +23,36 @@ struct PackageRegistrationManager {
 int m=0;
 vector<int>a;
 int k=0;
+  Abc_Obj_t* DFS(Abc_Obj_t* pObj,int n){
 
+        if(n==1 || n==0){
+            return pObj;
+        }
+        else if(Abc_ObjFaninNum(pObj)>1 && pObj->Type==ABC_OBJ_NODE && Abc_ObjFanoutNum(pObj)<=1){
+            for(int i=0;i<Abc_ObjFaninNum(pObj);i++){
+                if(Abc_ObjFanoutNum(Abc_ObjFanin(pObj,i))<=1 ){
+                    a.push_back(Abc_ObjId(pObj));
+                    a.push_back(Abc_ObjId(Abc_ObjFanin(pObj,i)));
+                    Abc_ObjFanin(pObj,i)->fPersist=1;
+                    DFS(Abc_ObjFanin(pObj,i),n-1);
+                }
+            }
+        }
+        else if(Abc_ObjFanoutNum(pObj)>1){
+            for(int i=0;i<Abc_ObjFaninNum(pObj);i++){
+                if(Abc_ObjFanin(pObj,i)->Type==ABC_OBJ_NODE && Abc_ObjFanoutNum(Abc_ObjFanin(pObj,i))<=1){
+                    if(i==0){
+                        m++;
+                        printf("\n");
+                        std::cout<<"MSFC: "<<m-1;
+                    }
+                    a.push_back(Abc_ObjId(Abc_ObjFanin(pObj,i)));
+                    DFS(Abc_ObjFanin(pObj,i),n-1);
+                }
+            }
+        }
+        return pObj;
+    }
 //foreachnode{
 // if fanout>1,cout Objname;
 //else id+travesal;do{id} while(fanout=1);print all ids;
@@ -61,36 +90,7 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk) {
         printf("\n");
     }
 
-    Abc_Obj_t* DFS(Abc_Obj_t* pObj,int n){
-
-        if(n==1 || n==0){
-            return pObj;
-        }
-        else if(Abc_ObjFaninNum(pObj)>1 && pObj->Type==ABC_OBJ_NODE && Abc_ObjFanoutNum(pObj)<=1){
-            for(int i=0;i<Abc_ObjFaninNum(pObj);i++){
-                if(Abc_ObjFanoutNum(Abc_ObjFanin(pObj,i))<=1 ){
-                    a.push_back(Abc_ObjId(pObj));
-                    a.push_back(Abc_ObjId(Abc_ObjFanin(pObj,i)));
-                    Abc_ObjFanin(pObj,i)->fPersist=1;
-                    DFS(Abc_ObjFanin(pObj,i),n-1);
-                }
-            }
-        }
-        else if(Abc_ObjFanoutNum(pObj)>1){
-            for(int i=0;i<Abc_ObjFaninNum(pObj);i++){
-                if(Abc_ObjFanin(pObj,i)->Type==ABC_OBJ_NODE && Abc_ObjFanoutNum(Abc_ObjFanin(pObj,i))<=1){
-                    if(i==0){
-                        m++;
-                        printf("\n");
-                        std::cout<<"MSFC: "<<m-1;
-                    }
-                    a.push_back(Abc_ObjId(Abc_ObjFanin(pObj,i)));
-                    DFS(Abc_ObjFanin(pObj,i),n-1);
-                }
-            }
-        }
-        return pObj;
-    }
+  
 
     int Lsv_CommandPrintMSFC(Abc_Frame_t* pAbc, int argc, char** argv) {
         Abc_Ntk_t* pNtk = Abc_FrameReadNtk(pAbc);
