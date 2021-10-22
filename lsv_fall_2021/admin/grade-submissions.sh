@@ -89,8 +89,4 @@ if [ "$1" = "ALL" ]; then
 else
     echo "[INFO] Grading branch $1 ..."
     grade_one_branch "$1" point
-<<<<<<< HEAD
 fi
-=======
-fi
->>>>>>> upstream/master
