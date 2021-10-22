@@ -1,0 +1,4 @@
+ABC command line: "lsv_print_msfc".
+
+Cannot open input file "./benchmarks/random_control/*.aig". 
+Error: Empty network.

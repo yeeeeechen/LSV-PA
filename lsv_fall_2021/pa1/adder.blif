@@ -1,4 +1,4 @@
-.model bdd
+.model pa3
 .inputs a b c d
 .outputs s
 

@@ -1,0 +1,5 @@
+ABC command line: "dsec -n lsv_fall_2021/pa1/ref/sa4_ref.blif lsv_fall_2021/pa1/adder.blif".
+
+Line 4: Skipping line ".clock clk".
+Hierarchy reader flattened 6 instances of logic boxes and left 0 black boxes.
+Networks are equivalent.  Time =     0.01 sec
