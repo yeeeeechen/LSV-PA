@@ -32,10 +32,37 @@ struct sort_msfcs{
 	}
 };
 
+void Lsv_DfsMsfc(vector<vector<Abc_Obj_t*>*>* msfcs, vector<Abc_Obj_t*>* msfc, Abc_Obj_t* pObjRoot){
+	int i;
+	if(msfc == nullptr){
+		msfc = new vector<Abc_Obj_t*>;
+		msfc->push_back(pObjRoot);
+		msfcs->push_back(msfc);
+	}
+	else{
+		msfc->push_back(pObjRoot);
+	}
+
+	pObjRoot->iTemp = 1;
+	Abc_Obj_t* pObj;
+	Abc_ObjForEachFanin(pObjRoot, pObj, i){
+	  	if(pObj->Type == ABC_OBJ_NODE || pObj->Type == ABC_OBJ_CONST1){
+			if(pObj->iTemp == 0){
+				if(Abc_ObjFanoutNum(pObj) == 1)
+					Lsv_DfsMsfc(msfcs, msfc, pObj);
+				else
+					Lsv_DfsMsfc(msfcs, nullptr, pObj);
+
+			}
+	  }
+	}
+
+}
+
 //foreachnode{
 // if fanout>1,cout Objname;
 //else id+travesal;do{id} while(fanout=1);print all ids;
-// }
+
 
 void Lsv_NtkPrintMsfc(Abc_Ntk_t* pNtk) {
    vector<vector<Abc_Obj_t*>*>* msfcs = new vector<vector<Abc_Obj_t*>*>;
@@ -90,7 +117,7 @@ void Lsv_NtkPrintMsfc(Abc_Ntk_t* pNtk) {
             Abc_Print(-1, "Empty network.\n");
             return 1;
         }
-        Lsv_NtkPrintMSFC(pNtk);
+        Lsv_NtkPrintMsfc(pNtk);
         return 0;
 
         usage:
@@ -100,29 +127,3 @@ void Lsv_NtkPrintMsfc(Abc_Ntk_t* pNtk) {
         return 1;
     }
 
-void Lsv_DfsMsfc(vector<vector<Abc_Obj_t*>*>* msfcs, vector<Abc_Obj_t*>* msfc, Abc_Obj_t* pObjRoot){
-	int i;
-	if(msfc == nullptr){
-		msfc = new vector<Abc_Obj_t*>;
-		msfc->push_back(pObjRoot);
-		msfcs->push_back(msfc);
-	}
-	else{
-		msfc->push_back(pObjRoot);
-	}
-
-	pObjRoot->iTemp = 1;
-	Abc_Obj_t* pObj;
-	Abc_ObjForEachFanin(pObjRoot, pObj, i){
-	  	if(pObj->Type == ABC_OBJ_NODE || pObj->Type == ABC_OBJ_CONST1){
-			if(pObj->iTemp == 0){
-				if(Abc_ObjFanoutNum(pObj) == 1)
-					Lsv_DfsMsfc(msfcs, msfc, pObj);
-				else
-					Lsv_DfsMsfc(msfcs, nullptr, pObj);
-
-			}
-	  }
-	}
-
-}
