@@ -95,7 +95,7 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk) {
   int totalNodeCount = p_msfc_nodes.size();
   // if ((Abc_ObjFanoutNum(p_msfc_nodes.front()) == 1) || (Abc_ObjFanoutNum(p_msfc_nodes.front()) == 1)) p_msfc_nodes.erase(p_msfc_nodes.begin());
   while(sortedNodeCount < totalNodeCount){ // find an MSFC in the AIG
-    // printf("msfc_tree %d\n", msfc_tree_index); 
+    // if (msfc_tree_index % 100 == 0) printf("msfc_tree %d\n", msfc_tree_index); 
     /*
     for (i=0; i<totalNodeCount; i++){
       cout<<"p_msfc_nodes["<<i<<"] = "<< Abc_ObjName(p_msfc_nodes[i])<<"\n";
