@@ -55,6 +55,7 @@ tags
 
 /libabc.a
 /abc
+/abc-*
 
 /arch_flags
 

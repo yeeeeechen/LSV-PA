@@ -1,0 +1,25 @@
+.model 4SA
+.inputs a b c d
+.outputs s
+.latch _cin0 cin0 0
+.latch _cin1 cin1 0
+.latch _cin2 cin2 0
+.subckt full_adder a=a b=b c-in=cin0 sum=s0 c-out=_cin0
+.subckt full_adder a=c b=d c-in=cin1 sum=s1 c-out=_cin1
+.subckt full_adder a=s0 b=s1 c-in=cin2 sum=s c-out=_cin2
+.end
+
+
+.model full_adder
+.inputs a b c-in
+.outputs sum c-out
+.names a b c-in sum #sum=XOR(a,b,c-in)
+100 1
+010 1
+001 1
+111 1
+.names a b c-in c-out #c-out=MAJ(a,b,c-in)
+11- 1
+1-1 1
+-11 1
+.end
