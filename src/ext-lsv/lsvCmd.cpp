@@ -80,8 +80,8 @@ bool compareVV(vector<Abc_Obj_t*>& a, vector<Abc_Obj_t*>& b)
 
 unordered_map<string, int> const_exist;
 
-// void TRAVERSE(Abc_Ntk_t* pNtk, Abc_Obj_t* pNode, vector<Abc_Obj_t*>& cone, bool rt, vector<Abc_Obj_t*>& cst)
-void TRAVERSE(Abc_Ntk_t* pNtk, Abc_Obj_t* pNode, vector<Abc_Obj_t*>& cone, bool rt)
+void TRAVERSE(Abc_Ntk_t* pNtk, Abc_Obj_t* pNode, vector<Abc_Obj_t*>& cone, bool rt, vector<Abc_Obj_t*>& cst)
+// void TRAVERSE(Abc_Ntk_t* pNtk, Abc_Obj_t* pNode, vector<Abc_Obj_t*>& cone, bool rt)
 {
     if (pNode -> fMarkA == 1) {return;}
     
@@ -99,7 +99,7 @@ void TRAVERSE(Abc_Ntk_t* pNtk, Abc_Obj_t* pNode, vector<Abc_Obj_t*>& cone, bool 
     {
         if (Abc_ObjFanoutNum(pNode) > 1)
         {
-            // cst.push_back(pNode);
+            cst.push_back(pNode);
             return;
         }
         else
@@ -127,8 +127,8 @@ void TRAVERSE(Abc_Ntk_t* pNtk, Abc_Obj_t* pNode, vector<Abc_Obj_t*>& cone, bool 
     Abc_Obj_t* pFanin;
     int i;
     // recursively traverse each fanin
-    // Abc_ObjForEachFanin(pNode, pFanin, i) { TRAVERSE(pNtk, pFanin, cone, false, cst); }
-    Abc_ObjForEachFanin(pNode, pFanin, i) { TRAVERSE(pNtk, pFanin, cone, false); }
+    Abc_ObjForEachFanin(pNode, pFanin, i) { TRAVERSE(pNtk, pFanin, cone, false, cst); }
+    // Abc_ObjForEachFanin(pNode, pFanin, i) { TRAVERSE(pNtk, pFanin, cone, false); }
 }
 
 void MSFC(Abc_Ntk_t* pNtk)
@@ -139,13 +139,16 @@ void MSFC(Abc_Ntk_t* pNtk)
     Abc_Obj_t* P_init;
     Abc_Obj_t* Po;
     vector<vector<Abc_Obj_t*> > cones;
+    bool exist;
     
+    // printf("get started \n");
     // initialization
     Abc_NtkForEachNode(pNtk, P_init, i_1)
     {
         P_init -> fMarkA = 0;
         P_init -> fMarkB = 0;
     }
+    // printf("finish initialization \n");
     
     int i_2;
     // primary output
@@ -159,24 +162,65 @@ void MSFC(Abc_Ntk_t* pNtk)
             //printf("PI \n");
             vector<Abc_Obj_t*> cone;
             vector<Abc_Obj_t*> cst;
-            // TRAVERSE(pNtk, pFanin, cone, true, cst);
-            TRAVERSE(pNtk, pFanin, cone, true);
-            sort(cone.begin(), cone.end(), compareV);
-            cones.push_back(cone);
-            /*
+            TRAVERSE(pNtk, pFanin, cone, true, cst);
+            // TRAVERSE(pNtk, pFanin, cone, true);
+            if (!(cone.empty()))
+            {
+                sort(cone.begin(), cone.end(), compareV);
+                cones.push_back(cone);
+            }
+            
+            
             if ((!cst.empty())&&(!done))
             {
                 cones.push_back(cst);
                 done = true;
             }
-            */
+            
         }
     }
+    // printf("finish primary out \n");
 
-    while(true)
+    // test variables
+    // int t;
+    // t = 1;
+    
+    // printf("finish index intialization \n");
+    
+    do
     {
+        // printf("iteration %d \n", t);
+        
+        // execute
+        Abc_Obj_t* P_ite;
+        int j_3;
+        Abc_NtkForEachNode(pNtk, P_ite, j_3)
+        {
+            if (P_ite -> fMarkB == 1)
+            {
+                vector<Abc_Obj_t*> CONE;
+                vector<Abc_Obj_t*> CST;
+                TRAVERSE(pNtk, P_ite, CONE, true, CST);
+                // TRAVERSE(pNtk, P_ite, CONE, true);
+                if (!(CONE.empty()))
+                {
+                    sort(CONE.begin(), CONE.end(), compareV);
+                    cones.push_back(CONE);
+                }
+                
+                
+                if ((!CST.empty())&&(!done))
+                {
+                    cones.push_back(CST);
+                    done = true;
+                }
+                
+            }
+        }
+        
+        // printf("augumentation %d \n", t);
+        
         // check if empty
-        bool exist;
         exist = false;
         Abc_Obj_t* P_check;
         int j_2;
@@ -188,33 +232,15 @@ void MSFC(Abc_Ntk_t* pNtk)
                 break;
             }
         }
-        if (exist == false) {break;}
         
-        // execute
-        Abc_Obj_t* P_ite;
-        int j_3;
-        Abc_NtkForEachNode(pNtk, P_ite, j_3)
-        {
-            if (P_ite -> fMarkB == 1)
-            {
-                vector<Abc_Obj_t*> CONE;
-                vector<Abc_Obj_t*> CST;
-                // TRAVERSE(pNtk, P_ite, CONE, true, CST);
-                TRAVERSE(pNtk, P_ite, CONE, true);
-                sort(CONE.begin(), CONE.end(), compareV);
-                cones.push_back(CONE);
-                /*
-                if ((!CST.empty())&&(!done))
-                {
-                    cones.push_back(CST);
-                    done = true;
-                }
-                */
-            }
-        }
-    }
+        // printf("empty check %d \n", t);
+        // t = t+1;
+        
+    }while(exist);
     
+    // printf("finish traversal \n");
     sort(cones.begin(), cones.end(), compareVV);
+    // printf("end sorting");
     
     int count_ans = 0;
     for (int k = 0 ; k < cones.size() ; ++k)
