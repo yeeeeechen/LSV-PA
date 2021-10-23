@@ -80,14 +80,12 @@ bool compareVV(vector<Abc_Obj_t*>& a, vector<Abc_Obj_t*>& b)
 
 unordered_map<string, int> const_exist;
 
-void TRAVERSE(Abc_Ntk_t* pNtk, Abc_Obj_t* pNode, vector<Abc_Obj_t*>& cone, bool rt)
+void TRAVERSE(Abc_Ntk_t* pNtk, Abc_Obj_t* pNode, vector<Abc_Obj_t*>& cone, bool rt, vector<Abc_Obj_t*>& cst)
+// void TRAVERSE(Abc_Ntk_t* pNtk, Abc_Obj_t* pNode, vector<Abc_Obj_t*>& cone, bool rt)
 {
     if (pNode -> fMarkA == 1) {return;}
-    else if ((Abc_ObjFanoutNum(pNode) > 1)&&(!rt))
-    {
-        pNode -> fMarkB = 1;
-        return;
-    }
+    
+    // base case
     else if (Abc_ObjIsCi(pNode))
     {
         pNode -> fMarkA = 1;
@@ -95,59 +93,138 @@ void TRAVERSE(Abc_Ntk_t* pNtk, Abc_Obj_t* pNode, vector<Abc_Obj_t*>& cone, bool 
         return;
         
     }
-    else if (!Abc_ObjIsPo(pNode))
+    
+    // constant
+    else if (Abc_ObjType(pNode)==1)
     {
-        cone.push_back(pNode);
-        pNode->fMarkA = 1;
+        if (Abc_ObjFanoutNum(pNode) > 1)
+        {
+            cst.push_back(pNode);
+            return;
+        }
+        else
+        {
+            cone.push_back(pNode);
+        }
+        return;
     }
-    else {pNode->fMarkA = 1;}
+    
+    // new fanout cone
+    else if ((Abc_ObjFanoutNum(pNode) > 1)&&(!rt))
+    {
+        pNode -> fMarkB = 1;
+        return;
+    }
+    
+    // travel
+    else
+    {
+        pNode->fMarkA = 1;
+        cone.push_back(pNode);
+    }
+
     pNode -> fMarkB = 0;
     Abc_Obj_t* pFanin;
     int i;
     // recursively traverse each fanin
-    Abc_ObjForEachFanin(pNode, pFanin, i) { TRAVERSE(pNtk, pFanin, cone, false); }
+    Abc_ObjForEachFanin(pNode, pFanin, i) { TRAVERSE(pNtk, pFanin, cone, false, cst); }
+    // Abc_ObjForEachFanin(pNode, pFanin, i) { TRAVERSE(pNtk, pFanin, cone, false); }
 }
 
 void MSFC(Abc_Ntk_t* pNtk)
 {
-    int i;
-    int j;
+    int i_1;
+    bool done;
+    done = false;
     Abc_Obj_t* P_init;
     Abc_Obj_t* Po;
     vector<vector<Abc_Obj_t*> > cones;
+    bool exist;
     
+    // printf("get started \n");
     // initialization
-    Abc_NtkForEachNode(pNtk, P_init, i)
+    Abc_NtkForEachNode(pNtk, P_init, i_1)
     {
         P_init -> fMarkA = 0;
         P_init -> fMarkB = 0;
     }
+    // printf("finish initialization \n");
     
+    int i_2;
     // primary output
-    Abc_NtkForEachPo(pNtk, Po, j)
+    Abc_NtkForEachPo(pNtk, Po, i_2)
     {
-        //printf("PO \n");
+        int j_1;
         Po -> fMarkA = 1;
         Abc_Obj_t* pFanin;
-        int k;
-        Abc_ObjForEachFanin(Po, pFanin, k)
+        Abc_ObjForEachFanin(Po, pFanin, j_1)
         {
             //printf("PI \n");
             vector<Abc_Obj_t*> cone;
-            TRAVERSE(pNtk, pFanin, cone, true);
-            sort(cone.begin(), cone.end(), compareV);
-            cones.push_back(cone);
+            vector<Abc_Obj_t*> cst;
+            TRAVERSE(pNtk, pFanin, cone, true, cst);
+            // TRAVERSE(pNtk, pFanin, cone, true);
+            if (!(cone.empty()))
+            {
+                sort(cone.begin(), cone.end(), compareV);
+                cones.push_back(cone);
+            }
+            
+            
+            if ((!cst.empty())&&(!done))
+            {
+                cones.push_back(cst);
+                done = true;
+            }
+            
         }
     }
+    // printf("finish primary out \n");
+
+    // test variables
+    // int t;
+    // t = 1;
     
-    while(true)
+    // printf("finish index intialization \n");
+    
+    do
     {
+        // printf("iteration %d \n", t);
+        
+        // execute
+        Abc_Obj_t* P_ite;
+        int j_3;
+        Abc_NtkForEachNode(pNtk, P_ite, j_3)
+        {
+            if (P_ite -> fMarkB == 1)
+            {
+                vector<Abc_Obj_t*> CONE;
+                vector<Abc_Obj_t*> CST;
+                TRAVERSE(pNtk, P_ite, CONE, true, CST);
+                // TRAVERSE(pNtk, P_ite, CONE, true);
+                if (!(CONE.empty()))
+                {
+                    sort(CONE.begin(), CONE.end(), compareV);
+                    cones.push_back(CONE);
+                }
+                
+                
+                if ((!CST.empty())&&(!done))
+                {
+                    cones.push_back(CST);
+                    done = true;
+                }
+                
+            }
+        }
+        
+        // printf("augumentation %d \n", t);
+        
         // check if empty
-        bool exist;
         exist = false;
         Abc_Obj_t* P_check;
-        int l;
-        Abc_NtkForEachNode(pNtk, P_check, l)
+        int j_2;
+        Abc_NtkForEachNode(pNtk, P_check, j_2)
         {
             if (P_check -> fMarkB == 1)
             {
@@ -155,41 +232,15 @@ void MSFC(Abc_Ntk_t* pNtk)
                 break;
             }
         }
-        if (exist == false) {break;}
         
-        // execute
-        Abc_Obj_t* P_ite;
-        int m;
-        Abc_NtkForEachNode(pNtk, P_ite, m)
-        {
-            if (P_ite -> fMarkB == 1)
-            {
-                vector<Abc_Obj_t*> cone;
-                TRAVERSE(pNtk, P_ite, cone, true);
-                sort(cone.begin(), cone.end(), compareV);
-                cones.push_back(cone);
-            }
-        }
-    }
+        // printf("empty check %d \n", t);
+        // t = t+1;
+        
+    }while(exist);
     
+    // printf("finish traversal \n");
     sort(cones.begin(), cones.end(), compareVV);
-    
-    int n1, n2, n3;
-    Abc_NtkForEachPo(pNtk, P_init, n1)
-    {
-        P_init -> fMarkA = 0;
-        P_init -> fMarkB = 0;
-    }
-    Abc_NtkForEachNode(pNtk, P_init, n2);\
-    {
-        P_init -> fMarkA = 0;
-        P_init -> fMarkB = 0;
-    }
-    Abc_NtkForEachPi(pNtk, P_init, n3)
-    {
-        P_init -> fMarkA = 0;
-        P_init -> fMarkB = 0;
-    }
+    // printf("end sorting");
     
     int count_ans = 0;
     for (int k = 0 ; k < cones.size() ; ++k)
@@ -202,6 +253,27 @@ void MSFC(Abc_Ntk_t* pNtk)
         else { printf(","); }
       }
       ++count_ans;
+    }
+
+    int i_3;
+    Abc_NtkForEachNode(pNtk, P_init, i_3)
+    {
+        P_init -> fMarkA = 0;
+        P_init -> fMarkB = 0;
+    }
+    
+    int i_4;
+    Abc_NtkForEachPo(pNtk, P_init, i_4)
+    {
+        P_init -> fMarkA = 0;
+        P_init -> fMarkB = 0;
+    }
+    
+    int i_5;
+    Abc_NtkForEachPi(pNtk, P_init, i_5)
+    {
+        P_init -> fMarkA = 0;
+        P_init -> fMarkB = 0;
     }
 }
 
@@ -236,3 +308,4 @@ usage:
   return 1;
 
 }
+

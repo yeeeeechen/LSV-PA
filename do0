@@ -1,0 +1,2 @@
+read ./benchmarks/random_control/router.aig
+lsv_print_msfc
