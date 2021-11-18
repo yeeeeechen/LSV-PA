@@ -1,0 +1,9 @@
+ABC command line: "dsec -n lsv_fall_2021/pa1/ref/sa4_ref.blif lsv_fall_2021/pa1/4nsa.blif".
+
+Line 4: Skipping line ".clock clk".
+Hierarchy reader flattened 6 instances of logic boxes and left 0 black boxes.
+Line 10: Skipping line ".name cout2 cout3 cout4".
+Warning: Constant-0 drivers added to 3 non-driven nets in network "4bitadder":
+cin1_out, cout4, cin2_out
+Hierarchy reader flattened 4 instances of logic boxes and left 0 black boxes.
+Networks are NOT EQUIVALENT after simulation.   Time =     0.00 sec
