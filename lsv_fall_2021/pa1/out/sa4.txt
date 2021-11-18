@@ -1,0 +1,7 @@
+ABC command line: "dsec -n lsv_fall_2021/pa1/ref/sa4_ref.blif lsv_fall_2021/pa1/4_bit_adder.blif".
+
+Line 4: Skipping line ".clock clk".
+Hierarchy reader flattened 6 instances of logic boxes and left 0 black boxes.
+Line 35: Skipping line ".search ADDER.blif".
+Hierarchy reader flattened 4 instances of logic boxes and left 0 black boxes.
+Error: The network has no latches. Used combinational command "cec".
