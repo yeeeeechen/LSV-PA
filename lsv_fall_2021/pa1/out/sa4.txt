@@ -1,0 +1,7 @@
+ABC command line: "dsec -n lsv_fall_2021/pa1/ref/sa4_ref.blif lsv_fall_2021/pa1/PA_1.blif".
+
+Line 4: Skipping line ".clock clk".
+Hierarchy reader flattened 6 instances of logic boxes and left 0 black boxes.
+Network "HW_1" contains combinational loop!
+Box "n11" is encountered twice on the following path to the COs:
+ n11 -> n25 -> PO "n20"
