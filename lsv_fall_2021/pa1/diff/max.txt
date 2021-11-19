@@ -1,5 +1,5 @@
---- lsv_fall_2021/pa1/ref/max.txt	2021-11-18 18:25:23.789659864 +0800
-+++ lsv_fall_2021/pa1/out/max.txt	2021-11-18 20:28:28.377680577 +0800
+--- lsv_fall_2021/pa1/ref/max.txt	2021-11-19 09:35:04.360750982 +0800
++++ lsv_fall_2021/pa1/out/max.txt	2021-11-19 11:13:26.599105444 +0800
 @@ -1,606 +1,2 @@
  ABC command line: "lsv_print_msfc".
  

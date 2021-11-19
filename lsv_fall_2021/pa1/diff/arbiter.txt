@@ -1,5 +1,5 @@
---- lsv_fall_2021/pa1/ref/arbiter.txt	2021-11-18 18:25:23.777659877 +0800
-+++ lsv_fall_2021/pa1/out/arbiter.txt	2021-11-18 20:28:28.657680608 +0800
+--- lsv_fall_2021/pa1/ref/arbiter.txt	2021-11-19 09:35:04.348751009 +0800
++++ lsv_fall_2021/pa1/out/arbiter.txt	2021-11-19 11:13:26.911105437 +0800
 @@ -1,771 +1,2 @@
  ABC command line: "lsv_print_msfc".
  

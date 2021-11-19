@@ -1,5 +1,5 @@
---- lsv_fall_2021/pa1/ref/voter.txt	2021-11-18 18:25:23.793659859 +0800
-+++ lsv_fall_2021/pa1/out/voter.txt	2021-11-18 20:28:28.541680595 +0800
+--- lsv_fall_2021/pa1/ref/voter.txt	2021-11-19 09:35:04.364750973 +0800
++++ lsv_fall_2021/pa1/out/voter.txt	2021-11-19 11:13:26.787105441 +0800
 @@ -1,6776 +1,2 @@
  ABC command line: "lsv_print_msfc".
  

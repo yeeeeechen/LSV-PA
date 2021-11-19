@@ -1,5 +1,5 @@
---- lsv_fall_2021/pa1/ref/cavlc.txt	2021-11-18 18:25:23.777659877 +0800
-+++ lsv_fall_2021/pa1/out/cavlc.txt	2021-11-18 20:28:28.741680617 +0800
+--- lsv_fall_2021/pa1/ref/cavlc.txt	2021-11-19 09:35:04.348751009 +0800
++++ lsv_fall_2021/pa1/out/cavlc.txt	2021-11-19 11:13:27.003105435 +0800
 @@ -1,132 +1,2 @@
  ABC command line: "lsv_print_msfc".
  
