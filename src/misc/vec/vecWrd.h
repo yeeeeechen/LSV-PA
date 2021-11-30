@@ -382,6 +382,10 @@ static inline int Vec_WrdSize( Vec_Wrd_t * p )
 {
     return p->nSize;
 }
+static inline int Vec_WrdChangeSize( Vec_Wrd_t * p, int Shift )
+{
+    return p->nSize += Shift;
+}
 
 /**Function*************************************************************
 
@@ -902,6 +906,14 @@ static inline void Vec_WrdInsert( Vec_Wrd_t * p, int iHere, word Entry )
     for ( i = p->nSize - 1; i > iHere; i-- )
         p->pArray[i] = p->pArray[i-1];
     p->pArray[i] = Entry;
+}
+static inline void Vec_WrdDrop( Vec_Wrd_t * p, int i )
+{
+    int k;
+    assert( i >= 0 && i < Vec_WrdSize(p) );
+    p->nSize--;
+    for ( k = i; k < p->nSize; k++ )
+        p->pArray[k] = p->pArray[k+1];
 }
 
 /**Function*************************************************************

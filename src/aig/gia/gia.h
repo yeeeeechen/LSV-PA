@@ -216,6 +216,8 @@ struct Gia_Man_t_
     Vec_Wrd_t *    vSimsPo;
     Vec_Int_t *    vClassOld;
     Vec_Int_t *    vClassNew;
+    Vec_Int_t *    vPats;
+    Vec_Bit_t *    vPolars;
     // incremental simulation
     int            fIncrSim;
     int            iNextPi;
@@ -547,6 +549,7 @@ static inline void         Gia_ObjFlipFaninC0( Gia_Obj_t * pObj )              {
 static inline int          Gia_ObjFaninNum( Gia_Man_t * p, Gia_Obj_t * pObj )  { if ( Gia_ObjIsMux(p, pObj) ) return 3; if ( Gia_ObjIsAnd(pObj) ) return 2; if ( Gia_ObjIsCo(pObj) ) return 1; return 0; }
 static inline int          Gia_ObjWhatFanin( Gia_Man_t * p, Gia_Obj_t * pObj, Gia_Obj_t * pFanin )  { if ( Gia_ObjFanin0(pObj) == pFanin ) return 0; if ( Gia_ObjFanin1(pObj) == pFanin ) return 1; if ( Gia_ObjFanin2(p, pObj) == pFanin ) return 2; assert(0); return -1; }
 
+static inline int          Gia_ManCoDriverId( Gia_Man_t * p, int iCoIndex )    { return Gia_ObjFaninId0p(p, Gia_ManCo(p, iCoIndex));                        }
 static inline int          Gia_ManPoIsConst( Gia_Man_t * p, int iPoIndex )     { return Gia_ObjFaninId0p(p, Gia_ManPo(p, iPoIndex)) == 0;                   }
 static inline int          Gia_ManPoIsConst0( Gia_Man_t * p, int iPoIndex )    { return Gia_ManIsConst0Lit( Gia_ObjFaninLit0p(p, Gia_ManPo(p, iPoIndex)) ); }
 static inline int          Gia_ManPoIsConst1( Gia_Man_t * p, int iPoIndex )    { return Gia_ManIsConst1Lit( Gia_ObjFaninLit0p(p, Gia_ManPo(p, iPoIndex)) ); }
@@ -620,6 +623,8 @@ static inline void         Gia_ObjSetTravIdCurrent( Gia_Man_t * p, Gia_Obj_t * p
 static inline void         Gia_ObjSetTravIdPrevious( Gia_Man_t * p, Gia_Obj_t * pObj )        { assert( Gia_ObjId(p, pObj) < p->nTravIdsAlloc ); p->pTravIds[Gia_ObjId(p, pObj)] = p->nTravIds - 1;                }
 static inline int          Gia_ObjIsTravIdCurrent( Gia_Man_t * p, Gia_Obj_t * pObj )          { assert( Gia_ObjId(p, pObj) < p->nTravIdsAlloc ); return (p->pTravIds[Gia_ObjId(p, pObj)] == p->nTravIds);          }
 static inline int          Gia_ObjIsTravIdPrevious( Gia_Man_t * p, Gia_Obj_t * pObj )         { assert( Gia_ObjId(p, pObj) < p->nTravIdsAlloc ); return (p->pTravIds[Gia_ObjId(p, pObj)] == p->nTravIds - 1);      }
+static inline int          Gia_ObjUpdateTravIdCurrent( Gia_Man_t * p, Gia_Obj_t * pObj )      { if ( Gia_ObjIsTravIdCurrent(p, pObj) )  return 1; Gia_ObjSetTravIdCurrent(p, pObj);  return 0; }
+static inline int          Gia_ObjUpdateTravIdPrevious( Gia_Man_t * p, Gia_Obj_t * pObj )     { if ( Gia_ObjIsTravIdPrevious(p, pObj) ) return 1; Gia_ObjSetTravIdPrevious(p, pObj); return 0; }
 static inline void         Gia_ObjSetTravIdCurrentId( Gia_Man_t * p, int Id )                 { assert( Id < p->nTravIdsAlloc ); p->pTravIds[Id] = p->nTravIds;                     }
 static inline void         Gia_ObjSetTravIdPreviousId( Gia_Man_t * p, int Id )                { assert( Id < p->nTravIdsAlloc ); p->pTravIds[Id] = p->nTravIds - 1;                 }
 static inline int          Gia_ObjIsTravIdCurrentId( Gia_Man_t * p, int Id )                  { assert( Id < p->nTravIdsAlloc ); return (p->pTravIds[Id] == p->nTravIds);           }
@@ -1275,6 +1280,11 @@ extern void                Gia_ManPrintFanio( Gia_Man_t * pGia, int nNodes );
 extern Gia_Man_t *         Gia_ManDupCof( Gia_Man_t * p, int iVar );
 extern Gia_Man_t *         Gia_ManDupCofAllInt( Gia_Man_t * p, Vec_Int_t * vSigs, int fVerbose );
 extern Gia_Man_t *         Gia_ManDupCofAll( Gia_Man_t * p, int nFanLim, int fVerbose );
+/*=== giaDecs.c ============================================================*/
+extern int                 Gia_ResubVarNum( Vec_Int_t * vResub );
+extern word                Gia_ResubToTruth6( Vec_Int_t * vResub );
+extern int                 Gia_ManEvalSolutionOne( Gia_Man_t * p, Vec_Wrd_t * vSims, Vec_Wrd_t * vIsfs, Vec_Int_t * vCands, Vec_Int_t * vSet, int nWords, int fVerbose );
+extern Vec_Int_t *         Gia_ManDeriveSolutionOne( Gia_Man_t * p, Vec_Wrd_t * vSims, Vec_Wrd_t * vIsfs, Vec_Int_t * vCands, Vec_Int_t * vSet, int nWords, int Type );
 /*=== giaDfs.c ============================================================*/
 extern void                Gia_ManCollectCis( Gia_Man_t * p, int * pNodes, int nNodes, Vec_Int_t * vSupp );
 extern void                Gia_ManCollectAnds_rec( Gia_Man_t * p, int iObj, Vec_Int_t * vNodes );
@@ -1583,6 +1593,12 @@ extern int                 Gia_ManIncrSimCheckEqual( Gia_Man_t * p, int iLit0, i
 /*=== giaSimBase.c ============================================================*/
 extern Vec_Wrd_t *         Gia_ManSimPatSim( Gia_Man_t * p );
 extern Vec_Wrd_t *         Gia_ManSimPatSimOut( Gia_Man_t * pGia, Vec_Wrd_t * vSimsPi, int fOuts );
+extern void                Gia_ManSim2ArrayOne( Vec_Wrd_t * vSimsPi, Vec_Int_t * vRes );
+extern Vec_Wec_t *         Gia_ManSim2Array( Vec_Ptr_t * vSims );
+extern Vec_Wrd_t *         Gia_ManArray2SimOne( Vec_Int_t * vRes );
+extern Vec_Ptr_t *         Gia_ManArray2Sim( Vec_Wec_t * vRes );
+extern void                Gia_ManPtrWrdDumpBin( char * pFileName, Vec_Ptr_t * p, int fVerbose );
+extern Vec_Ptr_t *         Gia_ManPtrWrdReadBin( char * pFileName, int fVerbose );
 /*=== giaSpeedup.c ============================================================*/
 extern float               Gia_ManDelayTraceLut( Gia_Man_t * p );
 extern float               Gia_ManDelayTraceLutPrint( Gia_Man_t * p, int fVerbose );

@@ -94,6 +94,8 @@ void Gia_ManStop( Gia_Man_t * p )
     Vec_IntFreeP( &p->vStore );
     Vec_IntFreeP( &p->vClassNew );
     Vec_IntFreeP( &p->vClassOld );
+    Vec_IntFreeP( &p->vPats );
+    Vec_BitFreeP( &p->vPolars );
     Vec_WrdFreeP( &p->vSims );
     Vec_WrdFreeP( &p->vSimsT );
     Vec_WrdFreeP( &p->vSimsPi );
