@@ -48,9 +48,10 @@ namespace
             nPI = Abc_NtkCiNum(pCone);
 
             // Constant function
-            if (nPI == 0)
+            if (nPI == 0 || nPI == 1)
             {
-                Abc_Print(1, "1\n\n");
+                // Abc_Print(1, "1\n\n");
+                Abc_Print(1, "0\n");
                 Abc_NtkDelete(pCone);
                 continue;
             }
