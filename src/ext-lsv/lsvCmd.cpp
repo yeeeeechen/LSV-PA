@@ -403,74 +403,76 @@ void or_bidec(Abc_Ntk_t* pNtk)
       sat_solver_addclause(pSat, poutput, poutput+1);
       output_var += max;
     }
-    // printf("))))))))))))))))))))))))))))))))))))))))))))\n");
     //   pSat -> fPrintClause = false;
-    for(size_t m = 0; m < inputs.size() - 1; ++m)
+    if(inputs.size() > 1)
     {
-      for(size_t n = m + 1; n < inputs.size(); ++n)
+      for(size_t m = 0; m < inputs.size() - 1; ++m)
       {
-        assumps.clear();
-        // std::cout<<m << " " << n << std::endl;
-        for(size_t k = 0; k < alphas.size(); ++k)
+        for(size_t n = m + 1; n < inputs.size(); ++n)
         {
-          if(k == m)
+          assumps.clear();
+          // std::cout<<m << " " << n << std::endl;
+          for(size_t k = 0; k < alphas.size(); ++k)
           {
-            assumps.push_back(toLitCond(alphas[k],1));
-            assumps.push_back(toLitCond(betas[k],0));
-          }
-          else if(k == n)
-          {
-            assumps.push_back(toLitCond(alphas[k],0));
-            assumps.push_back(toLitCond(betas[k],1));
-          }
-          else
-          {
-            assumps.push_back(toLitCond(alphas[k],1));
-            assumps.push_back(toLitCond(betas[k],1));
-          }
-          
-          // sat_solver_set_polarity(pSat, &alphas[k], 1);
-          // sat_solver_set_polarity(pSat, &betas[k], 1);
-        }
-        // output_var = outputs[0];
-        // for(size_t k = 0; k < 3; ++k)
-        // {
-        //   if(k == 0)
-        //   {
-        //     output_lit = Abc_Var2Lit(output_var, 0);
-        //   }
-        //   else
-        //   {
-        //     output_lit = Abc_Var2Lit(output_var, 1);
-        //   }
+            if(k == m)
+            {
+              assumps.push_back(toLitCond(alphas[k],1));
+              assumps.push_back(toLitCond(betas[k],0));
+            }
+            else if(k == n)
+            {
+              assumps.push_back(toLitCond(alphas[k],0));
+              assumps.push_back(toLitCond(betas[k],1));
+            }
+            else
+            {
+              assumps.push_back(toLitCond(alphas[k],1));
+              assumps.push_back(toLitCond(betas[k],1));
+            }
             
-        //   assumps.push_back(output_lit);
-        //   output_var += max;
-        // }
-        // std::cout << "assump size = " << assumps.size() << std::endl;
-        status = sat_solver_solve(pSat, &assumps[0],&assumps[assumps.size()], 0, 0, 0, 0);
-        // FILE * pFile;
-        // Sat_SolverPrintStats(pFile, pSat );
-        // if ( status == l_Undef )
-        //     printf( "Undecided.  \n" );
-        // if ( status == l_True )
-        //     printf( "Satisfiable.  \n" );
-        if ( status == l_False )
-        {
-          bidec = true;
-          ans_m = m;
-          ans_n = n;
-          nfinal = sat_solver_final(pSat, &pfinal);
-          // printf( "Unsatisfiable. \n" );
-          break;
+            // sat_solver_set_polarity(pSat, &alphas[k], 1);
+            // sat_solver_set_polarity(pSat, &betas[k], 1);
+          }
+          // output_var = outputs[0];
+          // for(size_t k = 0; k < 3; ++k)
+          // {
+          //   if(k == 0)
+          //   {
+          //     output_lit = Abc_Var2Lit(output_var, 0);
+          //   }
+          //   else
+          //   {
+          //     output_lit = Abc_Var2Lit(output_var, 1);
+          //   }
+              
+          //   assumps.push_back(output_lit);
+          //   output_var += max;
+          // }
+          // std::cout << "assump size = " << assumps.size() << std::endl;
+          status = sat_solver_solve(pSat, &assumps[0],&assumps[assumps.size()], 0, 0, 0, 0);
+          // FILE * pFile;
+          // Sat_SolverPrintStats(pFile, pSat );
+          // if ( status == l_Undef )
+          //     printf( "Undecided.  \n" );
+          // if ( status == l_True )
+          //     printf( "Satisfiable.  \n" );
+          if ( status == l_False )
+          {
+            bidec = true;
+            ans_m = m;
+            ans_n = n;
+            nfinal = sat_solver_final(pSat, &pfinal);
+            // printf( "Unsatisfiable. \n" );
+            break;
+          }
+          // for(size_t k = 0; k < assumps.size(); ++k)
+          // {
+          //   std::cout<< "assump " << k << assumps[k] <<std::endl;
+          // }
         }
-        // for(size_t k = 0; k < assumps.size(); ++k)
-        // {
-        //   std::cout<< "assump " << k << assumps[k] <<std::endl;
-        // }
+        if(bidec == true)
+          break;
       }
-      if(bidec == true)
-        break;
     }
     if(bidec)
     {
