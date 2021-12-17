@@ -1,7 +1,7 @@
 ABC command line: "lsv_or_bidec".
 
 PO sel_reg_dst[0] support partition: 1
-11020
+12200
 PO sel_reg_dst[1] support partition: 0
 PO sel_alu_opB[0] support partition: 0
 PO sel_alu_opB[1] support partition: 1
@@ -11,17 +11,15 @@ PO alu_op[0] support partition: 1
 PO alu_op[1] support partition: 1
 00012
 PO alu_op[2] support partition: 1
-12000
-PO alu_op_ext[0] support partition: 1
-12000
-PO alu_op_ext[1] support partition: 1
-12000
+11200
+PO alu_op_ext[0] support partition: 0
+PO alu_op_ext[1] support partition: 0
 PO alu_op_ext[2] support partition: 0
 PO alu_op_ext[3] support partition: 1
 12200
 PO halt support partition: 0
 PO reg_write support partition: 1
-10002
+12220
 PO sel_pc_opA support partition: 0
 PO sel_pc_opB support partition: 0
 PO beqz support partition: 0

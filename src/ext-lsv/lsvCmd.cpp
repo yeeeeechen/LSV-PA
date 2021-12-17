@@ -258,19 +258,21 @@ void Lsv_NtkOrBiDecom(Abc_Ntk_t* pNtk) {
 
     int* cnf_PI_IDs = new int[nPi];
     int cnf_PO_ID = 0;
+    int PO_comp = 0;
 
     // aig ID -> cnf ID
     Aig_ManForEachCi(pCnf->pMan, pObj, j) {
       cnf_PI_IDs[j] = pCnf->pVarNums[Aig_ObjId(pObj)];
     }
-    cnf_PO_ID = pCnf->pVarNums[Aig_ObjId((Aig_Obj_t *)Vec_PtrEntry(pCnf->pMan->vCos, 0))];
+    cnf_PO_ID = pCnf->pVarNums[Aig_ObjId(Aig_ManCo(pCnf->pMan, 0))];
+    PO_comp = pPo->fCompl0;
 
     int varshift = pCnf->nVars;
 
     // f(x)
     pSat = (sat_solver*)Cnf_DataWriteIntoSolver(pCnf, 1, 0);
     lit Lits[1];
-    Lits[0] = toLitCond( cnf_PO_ID, 0 );
+    Lits[0] = toLitCond( cnf_PO_ID, PO_comp );
     sat_solver_addclause( pSat, Lits, Lits + 1 );
 
     // f(x')
@@ -279,7 +281,7 @@ void Lsv_NtkOrBiDecom(Abc_Ntk_t* pNtk) {
     Cnf_CnfForClause( pCnf, pBeg, pEnd, j ) {
       sat_solver_addclause( pSat, pBeg, pEnd );
     }
-    Lits[0] = toLitCond( cnf_PO_ID + varshift, 1 );
+    Lits[0] = toLitCond( cnf_PO_ID + varshift, !PO_comp );
     sat_solver_addclause( pSat, Lits, Lits + 1 );
 
     // f(x'')
@@ -288,7 +290,7 @@ void Lsv_NtkOrBiDecom(Abc_Ntk_t* pNtk) {
     Cnf_CnfForClause( pCnf, pBeg, pEnd, j ) {
       sat_solver_addclause( pSat, pBeg, pEnd );
     }
-    Lits[0] = toLitCond( cnf_PO_ID + 2 * varshift, 1 );
+    Lits[0] = toLitCond( cnf_PO_ID + 2 * varshift, !PO_comp );
     sat_solver_addclause( pSat, Lits, Lits + 1 );
 
     // incremental SAT solving

@@ -1,6 +1,7 @@
 ABC command line: "lsv_or_bidec".
 
-PO outport[0] support partition: 0
+PO outport[0] support partition: 1
+121111111011111111111111111111
 PO outport[1] support partition: 1
 100000000002000000000000000002000000000000000000000000000002
 PO outport[2] support partition: 1
