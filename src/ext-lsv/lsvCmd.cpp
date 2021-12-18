@@ -246,6 +246,34 @@ bool seed2assumption(lit *assumptions,const std::vector<int>&seeds,const std::ve
   }
   return true;
 }
+void toans(int nFinal,int * pFinal,const std::vector<int>& ais,const std::vector<int>& bis){
+  std::vector<int>ans;
+  int id;
+  for (int i=0;i<ais.size();i++){
+    ans.push_back(3);
+  }
+  for (int i=0;i<nFinal;i++){
+    id=pFinal[i]/2;
+    for(int j=0;j<ais.size();j++){
+      if(ais[j]==id){
+        ans[j]^=1;
+        break;
+      }else if(bis[j]==id){
+        ans[j]^=2;
+        break;
+      }
+    }
+  }
+  for(int i=0;i<ans.size();i++){
+    if(ans[i]==3){
+      printf("1");
+    }else{
+      printf("%d",ans[i]);
+    }
+  }
+  printf("\n");
+
+}
 void print_one_ORbid(sat_solver *solver,const std::vector<int>& ais,const std::vector<int>& bis){
   bool endflag=false;
   int tob=ais.size();
@@ -272,12 +300,12 @@ void print_one_ORbid(sat_solver *solver,const std::vector<int>& ais,const std::v
         if(result==l_True){//sat
          // printf("sat %d %d\n",i,j);
         }else{//unsat
-          printf("unsat %d %d %d\n",i,j,ais.size()*2);
+          printf("1\n");
           nfinal=sat_solver_final(solver,&pFinal);
-          for (int k=0;k<nfinal;k++){
-            printf("%d ",pFinal[k]);
-          }
-          printf("end\n");
+          
+          
+          toans(nfinal,pFinal,ais,bis);
+          
           endflag=true;
           break;
         }
@@ -285,8 +313,10 @@ void print_one_ORbid(sat_solver *solver,const std::vector<int>& ais,const std::v
         seeds[i]=0;
         seeds[j]=0;
       }
+      
       if(endflag)break;
     }
+    if(!endflag)printf("0\n");
     //delete [] assumptions;
   
 }
@@ -315,7 +345,7 @@ void lsv_print_ORbid(Abc_Ntk_t*  pNtk){
     {
       Abc_NtkPo(pNtk_cone, 0)->fCompl0 ^= 1;
     }
-    
+    printf("PO %s support partition: ",Abc_ObjName(pObj));
     count++;
     
     pMan = Abc_NtkToDar(pNtk_cone, 0, 0);
@@ -339,10 +369,18 @@ void lsv_print_ORbid(Abc_Ntk_t*  pNtk){
     }
     //create sat solver ,add:  f(x) and !f'(x) and !f''(x)
     solver = (sat_solver *)Cnf_DataWriteIntoSolver(f1Cnf, 1, 0);
+    if(!solver){
+      printf("0\n");
+      continue;
+    }
     solver = (sat_solver *)Cnf_DataWriteIntoSolverInt(solver, f2Cnf, 1, 0);
+    if(!solver){
+      printf("0\n");
+      continue;
+    }
     solver = (sat_solver *)Cnf_DataWriteIntoSolverInt(solver, f3Cnf, 1, 0);
     //new ai , bi
-    printf("create ai bi\n");
+    //printf("create ai bi\n");
     for(int k=0;k<f1xis.size();k++){
       ais.push_back(sat_solver_addvar(solver));
       bis.push_back(sat_solver_addvar(solver));

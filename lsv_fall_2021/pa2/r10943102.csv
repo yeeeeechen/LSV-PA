@@ -1,0 +1,11 @@
+Benchmark,Result
+../benchmarks-master/random_control/arbiter.aig,Fail
+../benchmarks-master/random_control/cavlc.aig,Fail
+../benchmarks-master/random_control/ctrl.aig,Fail
+../benchmarks-master/random_control/dec.aig,Fail
+../benchmarks-master/random_control/i2c.aig,Fail
+../benchmarks-master/random_control/int2float.aig,Fail
+../benchmarks-master/random_control/priority.aig,Fail
+../benchmarks-master/random_control/router.aig,Fail
+../benchmarks-master/arithmetic/bar.aig,Fail
+Score,1
