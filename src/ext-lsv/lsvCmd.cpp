@@ -9,6 +9,7 @@ static int Lsv_MSFC(Abc_Frame_t* pAbc, int argc, char** argv);
 void init(Abc_Frame_t* pAbc) {
   Cmd_CommandAdd(pAbc, "LSV", "lsv_print_nodes", Lsv_CommandPrintNodes, 0);
   Cmd_CommandAdd(pAbc, "LSV", "lsv_print_msfc", Lsv_MSFC, 0);
+  Cmd_CommandAdd(pAbc, "LSV", "lsv_or_bidec", Lsv_OR_BIDEC, 0);
 }
 //1
 void destroy(Abc_Frame_t* pAbc) {}
@@ -18,6 +19,32 @@ Abc_FrameInitializer_t frame_initializer = {init, destroy};
 struct PackageRegistrationManager {
   PackageRegistrationManager() { Abc_FrameAddInitializer(&frame_initializer); }
 } lsvPackageRegistrationManager;
+
+
+int Lsv_OR_BIDEC(Abc_Frame_t* pAbc, int argc, char** argv){
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 struct myComp{
   bool operator() (const Abc_Obj_t* a, const Abc_Obj_t* b){
