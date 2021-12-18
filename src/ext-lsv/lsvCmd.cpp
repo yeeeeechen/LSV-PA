@@ -3,25 +3,45 @@
 #include "base/abc/abc.h"
 #include "base/main/main.h"
 #include "base/main/mainInt.h"
+#include "sat/cnf/cnf.h"
 #define Abc_NtkForEachNode_pa1(pNtk,pNode,i) for ( i = 0; (i < Vec_PtrSize((pNtk)->vObjs)) && (((pNode) = Abc_NtkObj(pNtk, i)), 1); i++ ) if ( (pNode) == NULL || (!Abc_ObjIsNode(pNode) &&!(pNode->Type == ABC_OBJ_CONST1) )) {} else
-
+extern "C" Aig_Man_t *Abc_NtkToDar(Abc_Ntk_t *pNtk, int fExors, int fRegisters);
 //read ./lsv_fall_2021/pa1/4bitadder_s.blif 
 //strash
 //lsv_print_msfc
 static int Lsv_CommandPrintNodes(Abc_Frame_t* pAbc, int argc, char** argv);
 static int Lsv_CommandPrint_msfc(Abc_Frame_t* pAbc, int argc, char** argv);
+static int lsv_or_bidec(Abc_Frame_t* pAbc, int argc, char** argv);
 
 void init(Abc_Frame_t* pAbc) {
   Cmd_CommandAdd(pAbc, "LSV", "lsv_print_nodes", Lsv_CommandPrintNodes, 0);
   //lsv_print_msfc
   Cmd_CommandAdd(pAbc, "LSV", "lsv_print_msfc", Lsv_CommandPrint_msfc, 0);
-
+  Cmd_CommandAdd(pAbc, "LSV", "lsv_or_bidec", lsv_or_bidec, 0);
 }
 
 void destroy(Abc_Frame_t* pAbc) {}
 
 Abc_FrameInitializer_t frame_initializer = {init, destroy};
+ int sat_solver_add_buffer_reverse_enable( sat_solver * pSat, int iVarA, int iVarB, int iVarEn, int fCompl )
+{
+    lit Lits[3];
+    int Cid;
+    assert( iVarA >= 0 && iVarB >= 0 && iVarEn >= 0 );
 
+    Lits[0] = toLitCond( iVarA, 0 );
+    Lits[1] = toLitCond( iVarB, !fCompl );
+    Lits[2] = toLitCond( iVarEn, 0 );
+    Cid = sat_solver_addclause( pSat, Lits, Lits + 3 );
+    assert( Cid );
+
+    Lits[0] = toLitCond( iVarA, 1 );
+    Lits[1] = toLitCond( iVarB, fCompl );
+    Lits[2] = toLitCond( iVarEn, 0 );
+    Cid = sat_solver_addclause( pSat, Lits, Lits + 3 );
+    assert( Cid );
+    return 2;
+}
 struct PackageRegistrationManager {
   PackageRegistrationManager() { Abc_FrameAddInitializer(&frame_initializer); }
 } lsvPackageRegistrationManager;
@@ -184,6 +204,7 @@ void Lsv_NtkPrint_msfc(Abc_Ntk_t* pNtk) {
   //printf("end\n");
 }
 int Lsv_CommandPrint_msfc(Abc_Frame_t* pAbc, int argc, char** argv) {
+
   Abc_Ntk_t* pNtk = Abc_FrameReadNtk(pAbc);
   int c;
   Extra_UtilGetoptReset();
@@ -208,3 +229,171 @@ usage:
   Abc_Print(-2, "\t-h    : print the command usage\n");
   return 1;
 }
+//return if it is valid seed
+bool seed2assumption(lit *assumptions,const std::vector<int>&seeds,const std::vector<int>& ais,const std::vector<int>& bis){
+  int tob=seeds.size();
+  for(int i=0;i<tob;i++){
+    if(seeds[i]==0){
+      assumptions[i]=toLitCond(ais[i],1);
+      assumptions[i+tob]=toLitCond(bis[i],1);
+    }else if(seeds[i]==1){
+      assumptions[i]=toLitCond(ais[i],1);
+      assumptions[i+tob]=toLitCond(bis[i],0);
+    }else if(seeds[i]==2){
+      assumptions[i]=toLitCond(ais[i],0);
+      assumptions[i+tob]=toLitCond(bis[i],1);
+    }
+  }
+  return true;
+}
+void print_one_ORbid(sat_solver *solver,const std::vector<int>& ais,const std::vector<int>& bis){
+  bool endflag=false;
+  int tob=ais.size();
+  lit *assumptions = new lit[ais.size()*2];
+  std::vector<int>seeds;
+  int result;
+  int *pFinal;
+  int nfinal;
+  for (int i=0;i<tob;i++){
+    seeds.push_back(0);
+  }
+  
+
+    //generate next  seed
+    for(int i=0;i<seeds.size();i++){
+      for(int j=i+1;j<seeds.size();j++){
+        seeds[i]=1;
+        seeds[j]=2;
+        //use seed to create assumption
+        seed2assumption(assumptions,seeds,ais,bis);
+        //use assumption to solve
+        result=sat_solver_solve(solver,assumptions,assumptions+ais.size()*2,0,0,0,0);
+        //check result
+        if(result==l_True){//sat
+         // printf("sat %d %d\n",i,j);
+        }else{//unsat
+          printf("unsat %d %d %d\n",i,j,ais.size()*2);
+          nfinal=sat_solver_final(solver,&pFinal);
+          for (int k=0;k<nfinal;k++){
+            printf("%d ",pFinal[k]);
+          }
+          printf("end\n");
+          endflag=true;
+          break;
+        }
+        //
+        seeds[i]=0;
+        seeds[j]=0;
+      }
+      if(endflag)break;
+    }
+    //delete [] assumptions;
+  
+}
+void lsv_print_ORbid(Abc_Ntk_t*  pNtk){
+  Abc_Obj_t* pObj;
+  Aig_Obj_t* conePI;
+  int i,j;
+  Abc_Ntk_t * pNtk_cone;
+  Aig_Man_t *pMan;
+  Cnf_Dat_t *f1Cnf;
+  Cnf_Dat_t *f2Cnf;
+  Cnf_Dat_t *f3Cnf;
+  int nclasues;
+  int liftconst;
+  std::vector<int> f1xis;
+  std::vector<int> ais;
+  std::vector<int> bis;
+  sat_solver *solver;
+  int count=0;
+  Abc_NtkForEachPo(pNtk, pObj, i){
+    f1xis.clear();
+    ais.clear();
+    bis.clear();
+    pNtk_cone=Abc_NtkCreateCone(pNtk,Abc_ObjFanin0(pObj),Abc_ObjName(pObj),0);// 0 => don't keep all pi(DFS reached only)
+    if (Abc_ObjFaninC0(pObj))
+    {
+      Abc_NtkPo(pNtk_cone, 0)->fCompl0 ^= 1;
+    }
+    
+    count++;
+    
+    pMan = Abc_NtkToDar(pNtk_cone, 0, 0);
+    assert(Aig_ManCoNum(pMan)==1);
+    f1Cnf = Cnf_Derive(pMan, 0); //0 => assert all output to 1
+    f2Cnf = Cnf_DataDup(f1Cnf);
+    liftconst=f2Cnf->nVars;
+    Cnf_DataLift(f2Cnf,liftconst);
+    //todo:modify the output phase start
+    nclasues=f2Cnf->nClauses;
+    //printf("before %d",f2Cnf->pClauses[nclasues-1][0]);
+    f2Cnf->pClauses[nclasues-1][0]=f2Cnf->pClauses[nclasues-1][0] ^ 1;  //change assert output 1 => output 0
+    //printf("after %d",f2Cnf->pClauses[nclasues-1][0]);
+    //end
+    f3Cnf = Cnf_DataDup(f2Cnf);
+    assert(liftconst==f3Cnf->nVars);
+    Cnf_DataLift(f3Cnf,liftconst);
+    //get x0-xi -> varID
+    Aig_ManForEachCi(pMan,conePI,j){
+      f1xis.push_back(f1Cnf->pVarNums[conePI->Id]);
+    }
+    //create sat solver ,add:  f(x) and !f'(x) and !f''(x)
+    solver = (sat_solver *)Cnf_DataWriteIntoSolver(f1Cnf, 1, 0);
+    solver = (sat_solver *)Cnf_DataWriteIntoSolverInt(solver, f2Cnf, 1, 0);
+    solver = (sat_solver *)Cnf_DataWriteIntoSolverInt(solver, f3Cnf, 1, 0);
+    //new ai , bi
+    printf("create ai bi\n");
+    for(int k=0;k<f1xis.size();k++){
+      ais.push_back(sat_solver_addvar(solver));
+      bis.push_back(sat_solver_addvar(solver));
+      //printf("a%d b%d ",ais[k],bis[k]);
+    }
+    //printf("create ai bi end\n");
+    //create xi vs ai bi
+    for(int k=0;k<f1xis.size();k++){
+     // printf("f1%d f2%d ",f1xis[k],f1xis[k]+liftconst);
+      sat_solver_add_buffer_reverse_enable(solver,f1xis[k],f1xis[k]+liftconst,ais[k],0);
+      sat_solver_add_buffer_reverse_enable(solver,f1xis[k],f1xis[k]+2*liftconst,bis[k],0);
+    }
+   // printf("create buffer end\n");
+    //assume ai ,bi  incremental sat solving
+    print_one_ORbid(solver,ais,bis);
+    //sat_solver_add_const()
+    /*
+    delete f1Cnf;
+    delete f2Cnf;
+    delete f3Cnf;
+    delete conePI;*/
+    
+
+  }
+
+
+}
+
+int lsv_or_bidec(Abc_Frame_t* pAbc, int argc, char** argv){
+  Abc_Ntk_t* pNtk = Abc_FrameReadNtk(pAbc);
+  int c;
+  Extra_UtilGetoptReset();
+  while ((c = Extra_UtilGetopt(argc, argv, "h")) != EOF) {
+    switch (c) {
+      case 'h':
+        goto usage;
+      default:
+        goto usage;
+    }
+  }
+  if (!pNtk) {
+    Abc_Print(-1, "Empty network.\n");
+    return 1;
+  }
+  lsv_print_ORbid(pNtk);
+  return 0;
+
+usage:
+  Abc_Print(-2, "usage: lsv_or_bidec [-h]\n");
+  Abc_Print(-2, "\t      find OR bi-decomposable under a variable partition \n");
+  Abc_Print(-2, "\t-h    : print the command usage\n");
+  return 1;
+}
+
