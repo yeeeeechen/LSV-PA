@@ -8,10 +8,12 @@
 
 static int Lsv_CommandPrintNodes(Abc_Frame_t* pAbc, int argc, char** argv);
 static int Lsv_CommandPrintMSFC(Abc_Frame_t* pAbc, int argc, char** argv);
+static int Lsv_CommandOrBiDec(Abc_Frame_t* pAbc, int argc, char** argv);
 
 void init(Abc_Frame_t* pAbc) {
   Cmd_CommandAdd(pAbc, "LSV", "lsv_print_nodes", Lsv_CommandPrintNodes, 0);
   Cmd_CommandAdd(pAbc, "LSV", "lsv_print_msfc", Lsv_CommandPrintMSFC, 0);
+  Cmd_CommandAdd(pAbc, "LSV", "lsv_or_bidec", Lsv_CommandOrBiDec, 0);
 }
 
 void destroy(Abc_Frame_t* pAbc) {}
@@ -22,7 +24,9 @@ struct PackageRegistrationManager {
   PackageRegistrationManager() { Abc_FrameAddInitializer(&frame_initializer); }
 } lsvPackageRegistrationManager;
 
-// lsv_print_msfc functions
+// ---------------------------------------
+// lsv_print_msfc functions (PA1)
+// ---------------------------------------
 void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk) {
   Abc_Obj_t* pObj;
   int aFanout[Abc_NtkNodeNum(pNtk)], aGroupId[Abc_NtkNodeNum(pNtk)];
@@ -104,8 +108,44 @@ usage:
   Abc_Print(-2, "\t-h    : print the command usage\n");
   return 1;
 }
+// ---------------------------------------
+// lsv_or_bidec functions (PA2)
+// ---------------------------------------
+void Lsv_NtkOrBiDec(Abc_Ntk_t* pNtk) {
+  Abc_Obj_t* pObj;
+  int i;
+  
+}
 
+int Lsv_CommandOrBiDec(Abc_Frame_t* pAbc, int argc, char** argv) {
+  Abc_Ntk_t* pNtk = Abc_FrameReadNtk(pAbc);
+  int c;
+  Extra_UtilGetoptReset();
+  while ((c = Extra_UtilGetopt(argc, argv, "h")) != EOF) {
+    switch (c) {
+      case 'h':
+        goto usage;
+      default:
+        goto usage;
+    }
+  }
+  if (!pNtk) {
+    Abc_Print(-1, "Empty network.\n");
+    return 1;
+  }
+  Lsv_NtkOrBiDec(pNtk);
+  return 0;
+
+usage:
+  Abc_Print(-2, "usage: lsv_or_bidec [-h]\n");
+  Abc_Print(-2, "\t        prints the nodes in the network\n");
+  Abc_Print(-2, "\t-h    : print the command usage\n");
+  return 1;
+}
+
+// ---------------------------------------
 // lsv_print_nodes functions (example)
+// ---------------------------------------
 void Lsv_NtkPrintNodes(Abc_Ntk_t* pNtk) {
   Abc_Obj_t* pObj;
   int i;
