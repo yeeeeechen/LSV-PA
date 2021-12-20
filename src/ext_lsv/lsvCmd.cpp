@@ -1,10 +1,14 @@
 #include "base/abc/abc.h"
 #include "base/main/main.h"
 #include "base/main/mainInt.h"
+#include "sat/cnf/cnf.h"
+#include "sat/bsat/satSolver.h"
 
 #include <string>
 #include <vector>
 #include <list>
+
+extern "C" Aig_Man_t * Abc_NtkToDar( Abc_Ntk_t * pNtk, int fExors, int fRegisters );
 
 static int Lsv_CommandPrintNodes(Abc_Frame_t* pAbc, int argc, char** argv);
 static int Lsv_CommandPrintMSFC(Abc_Frame_t* pAbc, int argc, char** argv);
@@ -112,9 +116,146 @@ usage:
 // lsv_or_bidec functions (PA2)
 // ---------------------------------------
 void Lsv_NtkOrBiDec(Abc_Ntk_t* pNtk) {
-  Abc_Obj_t* pObj;
-  int i;
-  
+  Abc_Ntk_t *pCone;
+  Abc_Obj_t *pPo, *pPoNode;
+  Aig_Man_t *pAigMan;
+  Aig_Obj_t *pAigObj;
+  Cnf_Dat_t *pCnf;
+  sat_solver_t *pSat;
+  lit clause[3];
+  lit *assumpList;
+  int sat;
+  int *pFinalConf;
+  int FinalConfSize;
+  int *resultList;
+
+  int i, j;
+  int *pBeg, *pEnd;
+  int POvarId, varShift;
+  int supportNum, aBegId, bBegId;
+  int varId;
+
+  // pNtk = Abc_NtkStrash(pNtk, 1, 1, 0);
+
+  Abc_NtkForEachPo(pNtk, pPo, i) {
+    pPoNode = Abc_ObjFanin0(pPo);
+    pCone = Abc_NtkCreateCone(pNtk, pPoNode, Abc_ObjName(pPoNode), 0);
+    // pCone = Abc_NtkStrash(pCone, 1, 1, 0);
+    pAigMan = Abc_NtkToDar(pCone, 0, 0);
+
+    // f(X)
+    pCnf = Cnf_Derive(pAigMan, 1);
+    pSat = (sat_solver_t*)Cnf_DataWriteIntoSolver(pCnf, 1, 0);
+    varShift = pCnf->nVars;
+    POvarId = pCnf->pVarNums[Aig_ManCo(pAigMan, 0)->Id];
+    clause[0] = toLitCond(POvarId, 0);
+    sat_solver_addclause(pSat, clause, clause+1);
+
+    printf("PO(%d, %d) %s\n", Aig_ManCo(pAigMan, 0)->Id, POvarId, Abc_ObjName(pPo));
+
+    printf("VarNum(varShift) = %d\n", varShift);
+    // printf("Solver Size = %d\n", pSat->size);
+
+    // f(X')
+    Cnf_DataLift(pCnf, varShift);
+    Cnf_CnfForClause(pCnf, pBeg, pEnd, j) {
+      sat_solver_addclause(pSat, pBeg, pEnd);
+    }
+    clause[0] = toLitCond(POvarId + varShift, 1);
+    sat_solver_addclause(pSat, clause, clause+1);
+
+    // printf("Solver Size = %d\n", pSat->size);
+
+    // f(X'')
+    Cnf_DataLift(pCnf, varShift);
+    Cnf_CnfForClause(pCnf, pBeg, pEnd, j) {
+      sat_solver_addclause(pSat, pBeg, pEnd);
+    }
+    clause[0] = toLitCond(POvarId + 2*varShift, 1);
+    sat_solver_addclause(pSat, clause, clause+1);
+
+    // printf("Solver Size = %d\n", pSat->size);
+
+    // a & b
+    supportNum = Aig_ManCiNum(pAigMan);
+    aBegId = 3*varShift;
+    bBegId = 3*varShift + supportNum;
+    sat_solver_setnvars(pSat, 3*varShift + 2*supportNum);
+
+    printf("SupportNum = %d\n", supportNum);
+    printf("Solver Size = %d\n", pSat->size);
+    
+    Aig_ManForEachCi(pAigMan, pAigObj, j) {
+      varId = pCnf->pVarNums[pAigObj->Id] - 2*varShift;
+      // x equ x' or a
+      clause[0] = toLitCond(varId, 1);
+      clause[1] = toLitCond(varId + varShift, 0);
+      clause[2] = toLitCond(aBegId + j, 0);
+      sat_solver_addclause(pSat, clause, clause+3);
+      clause[0] = toLitCond(varId + varShift, 1);
+      clause[1] = toLitCond(varId, 0);
+      clause[2] = toLitCond(aBegId + j, 0);
+      sat_solver_addclause(pSat, clause, clause+3);
+      // x equ x'' or b
+      clause[0] = toLitCond(varId, 1);
+      clause[1] = toLitCond(varId + 2*varShift, 0);
+      clause[2] = toLitCond(bBegId + j, 0);
+      sat_solver_addclause(pSat, clause, clause+3);
+      clause[0] = toLitCond(varId + 2*varShift, 1);
+      clause[1] = toLitCond(varId, 0);
+      clause[2] = toLitCond(bBegId + j, 0);
+      sat_solver_addclause(pSat, clause, clause+3);
+    }
+
+    // set assumptions
+    assumpList = new lit[2*supportNum];
+    resultList = new int[supportNum];
+    for (int k = 0; k < 2*supportNum; k++) {
+      assumpList[k] = toLitCond(aBegId + k, 1);
+    }
+    for (int k = 0; k < supportNum; k++) {
+      resultList[k] = 3;
+    }
+
+    for (int a = 0; a < supportNum; a++) {
+      assumpList[a] = lit_neg(assumpList[a]);
+      for (int b = a+1+supportNum; b < 2*supportNum; b++) {
+        assumpList[b] = lit_neg(assumpList[b]);
+        for (int k = 0; k < 2*supportNum; k++) {
+          printf("%d ",lit_print(assumpList[k]));
+          if(k%supportNum == supportNum-1){printf("\n");}
+        }
+        printf("\n");
+
+        // sat solve
+        sat = sat_solver_solve(pSat, assumpList, assumpList + 2*supportNum, 0, 0, 0, 0);
+        if (sat == -1) {
+          FinalConfSize = sat_solver_final(pSat, &pFinalConf);
+          for (int k = 0; k < FinalConfSize; k++){
+            assert(lit_var(pFinalConf[k]) >= aBegId);
+            if (lit_var(pFinalConf[k]) < bBegId){
+              resultList[lit_var(pFinalConf[k])-aBegId] -= 2;
+            }
+            else {
+              resultList[lit_var(pFinalConf[k])-bBegId] -= 1;
+            }
+          }
+          for (int k = 0; k < supportNum; k++) {
+            printf("%d",resultList[k]);
+          }
+          getchar();
+          break;
+        }
+        assumpList[b] = lit_neg(assumpList[b]);
+      }
+      assumpList[a] = lit_neg(assumpList[a]);
+      if (sat == -1) break;
+    }
+    
+    delete [] resultList;
+    delete [] assumpList;
+    printf("\n");
+  }
 }
 
 int Lsv_CommandOrBiDec(Abc_Frame_t* pAbc, int argc, char** argv) {
