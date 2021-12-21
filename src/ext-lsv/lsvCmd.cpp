@@ -148,6 +148,11 @@ void Lsv_ORBIDEC(Abc_Ntk_t* pNtk) {
 				  lit_record[2*(j-1)] = toLitCond(ab_record[j-1][0],1);
 				  lit_record[2*(j-1)+1] = toLitCond(ab_record[j-1][1],1);
 			  }
+			  else if(i != 0)
+			  {
+				  lit_record[2*(ab_record.size()-1)] = toLitCond(ab_record[ab_record.size()-1][0],1);
+				  lit_record[2*(ab_record.size()-1)+1] = toLitCond(ab_record[ab_record.size()-1][1],1);
+			  }
 			  lit_record[2*j] = toLitCond(ab_record[j][0],1);
 			  lit_record[2*j+1] = toLitCond(ab_record[j][1],0);
 
