@@ -113,8 +113,6 @@ void Lsv_ORBIDEC(Abc_Ntk_t* pNtk) {
 		  temp.push_back(a);
 		  temp.push_back(b);
 		  ab_record.push_back(temp);
-		  //sat_solver_add_buffer_enable(sat, po_num, po_num_2, a, 0);
-		  //sat_solver_add_buffer_enable(sat, po_num, po_num_3, b, 0);
 		  
 		  lit a_array[3] = {toLitCond(po_num,1), toLitCond(po_num_2,0), toLitCond(a,0)};
 		  lit a_array_2[3] = {toLitCond(po_num,0), toLitCond(po_num_2,1), toLitCond(a,0)};
