@@ -139,7 +139,10 @@ void Lsv_NtkOrBiDec(Abc_Ntk_t* pNtk) {
 
   Abc_NtkForEachPo(pNtk, pPo, i) {
     pPoNode = Abc_ObjFanin0(pPo);
-    pCone = Abc_NtkCreateCone(pNtk, pPoNode, Abc_ObjName(pPoNode), 0);
+    pCone = Abc_NtkCreateCone(pNtk, pPoNode, Abc_ObjName(pPo), 0);
+    if (Abc_ObjFaninC0(pPo))
+      Abc_ObjXorFaninC(Abc_NtkPo(pCone, 0), 0);
+    
     // pCone = Abc_NtkStrash(pCone, 1, 1, 0);
     pAigMan = Abc_NtkToDar(pCone, 0, 0);
 
@@ -151,11 +154,11 @@ void Lsv_NtkOrBiDec(Abc_Ntk_t* pNtk) {
     clause[0] = toLitCond(POvarId, 0);
     sat_solver_addclause(pSat, clause, clause+1);
 
-    printf("PO(%d, %d) %s\n", Aig_ManCo(pAigMan, 0)->Id, POvarId, Abc_ObjName(pPo));
-
+    printf("PO %s support partition: ", Abc_ObjName(pPo));
+    /*
     printf("VarNum(varShift) = %d\n", varShift);
-    // printf("Solver Size = %d\n", pSat->size);
-
+    printf("Solver Size = %d\n", pSat->size);
+    */
     // f(X')
     Cnf_DataLift(pCnf, varShift);
     Cnf_CnfForClause(pCnf, pBeg, pEnd, j) {
@@ -163,9 +166,9 @@ void Lsv_NtkOrBiDec(Abc_Ntk_t* pNtk) {
     }
     clause[0] = toLitCond(POvarId + varShift, 1);
     sat_solver_addclause(pSat, clause, clause+1);
-
-    // printf("Solver Size = %d\n", pSat->size);
-
+    /*
+    printf("Solver Size = %d\n", pSat->size);
+    */
     // f(X'')
     Cnf_DataLift(pCnf, varShift);
     Cnf_CnfForClause(pCnf, pBeg, pEnd, j) {
@@ -173,17 +176,18 @@ void Lsv_NtkOrBiDec(Abc_Ntk_t* pNtk) {
     }
     clause[0] = toLitCond(POvarId + 2*varShift, 1);
     sat_solver_addclause(pSat, clause, clause+1);
-
-    // printf("Solver Size = %d\n", pSat->size);
-
+    /*
+    printf("Solver Size = %d\n", pSat->size);
+    */
     // a & b
     supportNum = Aig_ManCiNum(pAigMan);
     aBegId = 3*varShift;
     bBegId = 3*varShift + supportNum;
     sat_solver_setnvars(pSat, 3*varShift + 2*supportNum);
-
+    /*
     printf("SupportNum = %d\n", supportNum);
     printf("Solver Size = %d\n", pSat->size);
+    */
     
     Aig_ManForEachCi(pAigMan, pAigObj, j) {
       varId = pCnf->pVarNums[pAigObj->Id] - 2*varShift;
@@ -217,15 +221,18 @@ void Lsv_NtkOrBiDec(Abc_Ntk_t* pNtk) {
       resultList[k] = 3;
     }
 
+    sat = 0;
     for (int a = 0; a < supportNum; a++) {
       assumpList[a] = lit_neg(assumpList[a]);
       for (int b = a+1+supportNum; b < 2*supportNum; b++) {
         assumpList[b] = lit_neg(assumpList[b]);
+        /*
         for (int k = 0; k < 2*supportNum; k++) {
           printf("%d ",lit_print(assumpList[k]));
           if(k%supportNum == supportNum-1){printf("\n");}
         }
         printf("\n");
+        */
 
         // sat solve
         sat = sat_solver_solve(pSat, assumpList, assumpList + 2*supportNum, 0, 0, 0, 0);
@@ -240,10 +247,12 @@ void Lsv_NtkOrBiDec(Abc_Ntk_t* pNtk) {
               resultList[lit_var(pFinalConf[k])-bBegId] -= 1;
             }
           }
+
+          printf("1\n");
           for (int k = 0; k < supportNum; k++) {
             printf("%d",resultList[k]);
           }
-          getchar();
+          /* getchar(); */
           break;
         }
         assumpList[b] = lit_neg(assumpList[b]);
@@ -251,10 +260,11 @@ void Lsv_NtkOrBiDec(Abc_Ntk_t* pNtk) {
       assumpList[a] = lit_neg(assumpList[a]);
       if (sat == -1) break;
     }
-    
+    if (sat == -1) printf("\n");
+    else printf("0\n");
+
     delete [] resultList;
     delete [] assumpList;
-    printf("\n");
   }
 }
 
