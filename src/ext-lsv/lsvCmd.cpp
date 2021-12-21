@@ -9,6 +9,7 @@
 #include "set"
 #include "queue"
 #include <iostream>
+//debug//
 extern "C" Aig_Man_t * Abc_NtkToDar( Abc_Ntk_t *, int, int);
 using namespace::std;
 
