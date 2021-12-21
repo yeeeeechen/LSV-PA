@@ -1,4 +1,5 @@
 #include "base/abc/abc.h"
+#include "sat/cnf/cnf.h"
 #include "base/main/main.h"
 #include "base/main/mainInt.h"
 #include <vector>
@@ -8,12 +9,16 @@
 
 using namespace std;
 
+extern Aig_Man_t *  Abc_NtkToDar( Abc_Ntk_t * pNtk, int fExors, int fRegisters );
+
 static int Lsv_CommandPrintNodes(Abc_Frame_t* pAbc, int argc, char** argv);
 static int Lsv_CommandPrintMSFC(Abc_Frame_t* pAbc, int argc, char** argv);
+static int Lsv_CommandOrBidec(Abc_Frame_t* pAbc, int argc, char** argv);
 
 void init(Abc_Frame_t* pAbc) {
   Cmd_CommandAdd(pAbc, "LSV", "lsv_print_nodes", Lsv_CommandPrintNodes, 0);
   Cmd_CommandAdd(pAbc, "LSV", "lsv_print_msfc", Lsv_CommandPrintMSFC, 0);
+  Cmd_CommandAdd(pAbc, "LSV", "lsv_or_bidec", Lsv_CommandOrBidec, 0);
 }
 
 void destroy(Abc_Frame_t* pAbc) {}
@@ -170,4 +175,87 @@ usage:
   Abc_Print(-2, "\t        prints maximum single-fanout cones (MSFCs) that covers all nodes (excluding PIs and POs) of a given AIG\n");
   Abc_Print(-2, "\t-h    : print the command usage\n");
   return 1;
+}
+
+
+// ========= LSV or_bidec ============
+static int Lsv_Or_Bidec(Abc_Ntk_t*);
+static int Lsv_Po_Or_Bidec(Abc_Ntk_t);
+
+int Lsv_CommandOrBidec(Abc_Frame_t* pAbc, int argc, char** argv) {
+  Abc_Ntk_t* pNtk = Abc_FrameReadNtk(pAbc);
+  int c;
+  Extra_UtilGetoptReset();
+  while ((c = Extra_UtilGetopt(argc, argv, "h")) != EOF) {
+    switch (c) {
+      case "h" :
+        goto usage;
+      default:
+        goto usage;
+    }
+  }
+  if (!pNtk) {
+    Abc_Print(-1, "Empty network.\n");
+    return 1;
+  }
+  Lsv_Or_Bidec(pNtk);
+  return 0;
+
+usage:
+  Abc_Print(-2, "usage: lsv_or_bidec [-h]\n");
+  Abc_Print(-2, "\t        Decides whether each circuit POf(X)is OR bi-decomposabl\n          Format: 0,x belongs Xc;  1, Xb;  2, Xc\n");
+  Abc_Print(-2, "\t-h    : print the command usage\n");
+  return 1;
+}
+
+int Lsv_Or_Bidec(Abc_Ntk_t* pNtk) {
+// 1. For each PO, apply Abc_NtkCreateCone() to get a (a. cone) and (b. support set)
+  Abc_Obj_t* pObj;
+  Abc_Ntk_t* pNtkCone;
+  Aig_Man_t* pAigCone;
+  Cnf_Dat_t* pFcnf;
+
+  int i;
+  Abc_NtkForEachPo(pNtk, pObj, i) {
+
+    sat_solver* pSat;
+    int Lits[3];
+
+    pNtkCone = Abc_NtkCreateCone(pNtk, Abc_ObjFanin0(pObj), Abc_ObjName(pObj), 1);
+    if (Abc_ObjFaninC0(pObj))// restore info of complementary edge
+      Abc_ObjXorFaninC(Abc_NtkPo(pNtkCone, 0), 0);
+
+    // 2. Abc_NtkToDar() to construct Aig_Man_t from Abc_Ntk_t
+    pAigCone = Abc_NtkToDar(pNtkCone, 0, 0);
+    pFcnf = Cnf_Derive(pAigCone, Aig_ManCoNum(pAigCone));
+
+    // 3. Construct CNF and send it to SAT_Solver
+    pSat = sat_solver_new();
+    //    add F(X), F(X'), F(X'')
+    sat_solver_setnvars(pSat, pSat->nVars * 3);
+    for (int k=0; k<3; ++k) {
+      if (k>0)
+        Cnf_DataList(pFcnf, pFcnf->nVars);
+      for (int i=0; i<pFcnf->nClauses; ++i) {
+        if ( !sat_solver_addclause( pSat, pFcnf->pClauses[i], pFcnf->pClauses[i+1] ) )
+          {
+              Cnf_DataFree( pFcnf );
+              sat_solver_delete( pSat );
+              return;
+          }
+      }
+    }
+    //    add alpha, beta variables
+    for (int i=0; i<pFcnf->nVars; ++i) {
+      sat_solver_addvar(pSat);
+      sat_solver_addvar(pSat);
+    }
+
+    // 4. Solve a non-trival solution
+    
+
+    // end
+    Cnf_DataFree(pCnfOn);
+    sat_solver_delete(pSat);
+  }
 }
