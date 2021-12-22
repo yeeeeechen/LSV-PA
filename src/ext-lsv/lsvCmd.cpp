@@ -2,14 +2,19 @@
 #include "sat/cnf/cnf.h"
 #include "base/main/main.h"
 #include "base/main/mainInt.h"
+#include "misc/util/abc_global.h"
 #include <vector>
 #include <unordered_set>
+#include <unordered_map>
 #include <algorithm>
 #include <string>
+#include <iostream>
 
 using namespace std;
 
-extern Aig_Man_t *  Abc_NtkToDar( Abc_Ntk_t * pNtk, int fExors, int fRegisters );
+extern "C" {
+  Aig_Man_t *  Abc_NtkToDar( Abc_Ntk_t * pNtk, int fExors, int fRegisters );
+}
 
 static int Lsv_CommandPrintNodes(Abc_Frame_t* pAbc, int argc, char** argv);
 static int Lsv_CommandPrintMSFC(Abc_Frame_t* pAbc, int argc, char** argv);
@@ -188,7 +193,7 @@ int Lsv_CommandOrBidec(Abc_Frame_t* pAbc, int argc, char** argv) {
   Extra_UtilGetoptReset();
   while ((c = Extra_UtilGetopt(argc, argv, "h")) != EOF) {
     switch (c) {
-      case "h" :
+      case 'h' :
         goto usage;
       default:
         goto usage;
@@ -209,53 +214,184 @@ usage:
 }
 
 int Lsv_Or_Bidec(Abc_Ntk_t* pNtk) {
-// 1. For each PO, apply Abc_NtkCreateCone() to get a (a. cone) and (b. support set)
-  Abc_Obj_t* pObj;
+  // 1. For each PO, apply Abc_NtkCreateCone() to get a (a. cone) and (b. support set)
+  Abc_Obj_t* pNtkObj;
+  Aig_Obj_t* pAigObj;
   Abc_Ntk_t* pNtkCone;
   Aig_Man_t* pAigCone;
   Cnf_Dat_t* pFcnf;
+  int nVarShift;
+  int Lits[3], status;
 
-  int i;
-  Abc_NtkForEachPo(pNtk, pObj, i) {
+  int poId, piId;
+  Abc_NtkForEachPo(pNtk, pNtkObj, poId) {
 
     sat_solver* pSat;
-    int Lits[3];
 
-    pNtkCone = Abc_NtkCreateCone(pNtk, Abc_ObjFanin0(pObj), Abc_ObjName(pObj), 1);
-    if (Abc_ObjFaninC0(pObj))// restore info of complementary edge
+    pNtkCone = Abc_NtkCreateCone(pNtk, Abc_ObjFanin0(pNtkObj), Abc_ObjName(pNtkObj), 1);
+    if (Abc_ObjFaninC0(pNtkObj))// restore info of complementary edge
       Abc_ObjXorFaninC(Abc_NtkPo(pNtkCone, 0), 0);
 
     // 2. Abc_NtkToDar() to construct Aig_Man_t from Abc_Ntk_t
-    pAigCone = Abc_NtkToDar(pNtkCone, 0, 0);
+    pAigCone = Abc_NtkToDar(pNtkCone, 0, 1);
     pFcnf = Cnf_Derive(pAigCone, Aig_ManCoNum(pAigCone));
 
     // 3. Construct CNF and send it to SAT_Solver
-    pSat = sat_solver_new();
+    pSat = (sat_solver *)Cnf_DataWriteIntoSolver( pFcnf, 1, 0 );
+    unordered_map<int, int> objidToAlpha;
+    unordered_map<int, bool> ctrlAConflict;
+    vector<int> ctrlA;
+    unordered_map<int, int> objidToBeta;
+    unordered_map<int, bool> ctrlBConflict;
+    vector<int> ctrlB;
+
+    Aig_ManForEachCi(pAigCone, pAigObj, piId) {
+      int a = sat_solver_addvar(pSat);
+      int b = sat_solver_addvar(pSat);
+      // TODO: delete objidToAlpha[pAigObj->Id]
+      objidToAlpha[pAigObj->Id] = a;
+      objidToBeta[pAigObj->Id] = b;
+      ctrlA.push_back(a);
+      ctrlB.push_back(b);
+      ctrlAConflict[a] = false;
+      ctrlBConflict[b] = false;
+    }
+
+    // TODO: change to pFcnf->nVar
+    nVarShift = 0;
+    Aig_ManForEachObj(pAigCone, pAigObj, piId) {
+      if (pFcnf->pVarNums[pAigObj->Id] > nVarShift)
+        nVarShift = pFcnf->pVarNums[pAigObj->Id];
+    }
     //    add F(X), F(X'), F(X'')
-    sat_solver_setnvars(pSat, pSat->nVars * 3);
     for (int k=0; k<3; ++k) {
       if (k>0)
-        Cnf_DataList(pFcnf, pFcnf->nVars);
+        Cnf_DataLift(pFcnf, nVarShift);
       for (int i=0; i<pFcnf->nClauses; ++i) {
         if ( !sat_solver_addclause( pSat, pFcnf->pClauses[i], pFcnf->pClauses[i+1] ) )
           {
-              Cnf_DataFree( pFcnf );
-              sat_solver_delete( pSat );
-              return;
+            Cnf_DataFree( pFcnf );
+            sat_solver_delete( pSat );
+            return -1;
           }
       }
-    }
-    //    add alpha, beta variables
-    for (int i=0; i<pFcnf->nVars; ++i) {
-      sat_solver_addvar(pSat);
-      sat_solver_addvar(pSat);
-    }
+    } 
 
-    // 4. Solve a non-trival solution
+    //    add clauses to assert the output phase of each copy (posit., neg., neg.)
+    assert(Aig_ManCoNum(pAigCone) == 1);
+    pAigObj = Aig_ManCo(pAigCone, 0); 
+    Lits[0] = toLitCond(pFcnf->pVarNums[pAigObj->Id], Aig_ObjPhase(pAigObj));
+    sat_solver_addclause(pSat, Lits, Lits+1);
+    Lits[0] = toLitCond(pFcnf->pVarNums[pAigObj->Id] + nVarShift, (Aig_ObjPhase(pAigObj) != 1));
+    sat_solver_addclause(pSat, Lits, Lits+1);
+    Lits[0] = toLitCond(pFcnf->pVarNums[pAigObj->Id] + nVarShift*2, (Aig_ObjPhase(pAigObj) != 1));
+    sat_solver_addclause(pSat, Lits, Lits+1);
+
+    //    add clauses describing controlling variables
+    Aig_ManForEachCi(pAigCone, pAigObj, piId) {
+      Lits[0] = toLitCond(pFcnf->pVarNums[pAigObj->Id], 0);
+      Lits[1] = toLitCond(pFcnf->pVarNums[pAigObj->Id] + nVarShift, 1);
+      Lits[2] = toLitCond(objidToAlpha[pAigObj->Id], 0);
+      sat_solver_addclause(pSat, Lits, Lits+3);
+      Lits[0] = toLitCond(pFcnf->pVarNums[pAigObj->Id], 1);
+      Lits[1] = toLitCond(pFcnf->pVarNums[pAigObj->Id] + nVarShift, 0);
+      sat_solver_addclause(pSat, Lits, Lits+3);
+
+      Lits[0] = toLitCond(pFcnf->pVarNums[pAigObj->Id], 0);
+      Lits[1] = toLitCond(pFcnf->pVarNums[pAigObj->Id] + nVarShift * 2, 1);
+      Lits[2] = toLitCond(objidToBeta[pAigObj->Id], 0);
+      sat_solver_addclause(pSat, Lits, Lits+3);
+      Lits[0] = toLitCond(pFcnf->pVarNums[pAigObj->Id], 1);
+      Lits[1] = toLitCond(pFcnf->pVarNums[pAigObj->Id] + nVarShift * 2, 0);
+      sat_solver_addclause(pSat, Lits, Lits+3);      
+    }
+    status = sat_solver_simplify( pSat );
+    assert( status != 0 );
     
+    // 4. Solve a non-trival solution using Incremental SAT solving
+    bool isExistPartition = false;
+    int nAigCi = Aig_ManCiNum(pAigCone);
+    assert(nAigCi != 0);
+    if (nAigCi <= 1) 
+      cout << "PO " << Abc_ObjName(pNtkObj) << " support partition: " << isExistPartition << endl;
+    else {
+    //    given fixed input index i, j as seed. 
+      for (int i=0; i<nAigCi - 1; ++i) {
+        for (int j=i+1; j<nAigCi; ++i) {
+          int assumpArray[nAigCi*2];
+          for (int k=0; k<nAigCi; ++k) {
+            // (0, 1) belongs b
+            if (i==k) {
+              assumpArray[k] = toLitCond(ctrlA[k], 1);
+              assumpArray[k + nAigCi] = toLitCond(ctrlB[k], 0);
+            }
+            // (1, 0) belongs a
+            else if (j == k) {
+              assumpArray[k] = toLitCond(ctrlA[k], 0);
+              assumpArray[k + nAigCi] = toLitCond(ctrlB[k], 1);
+            }
+            // (0, 0) not belongs a, b
+            else {
+              assumpArray[k] = toLitCond(ctrlA[k], 1);
+              assumpArray[k + nAigCi] = toLitCond(ctrlB[k], 1);
+            }
+          }
+          status = sat_solver_solve(pSat, assumpArray, assumpArray + nAigCi*2, (ABC_INT64_T)0, (ABC_INT64_T)0, (ABC_INT64_T)0, (ABC_INT64_T)0);
 
+          // If solver is UNSAT, means there exists a partition
+          int nCoreLits;
+          int* pCoreLits;
+          vector<int> partition, ctrlvars;
+
+          if (status == l_False) {
+            isExistPartition = true;
+            nCoreLits = sat_solver_final(pSat, &pCoreLits);
+
+            // Analyze the UNSAT core
+            // Only consider a, b
+            // Every literal in the conflict clause is of positive phase because the conflict arises from a subset of the controlling variables (alpha, beta) set to 0
+            for (int k = 0 ; k < nCoreLits ; ++k) {
+              if (ctrlAConflict.find(pCoreLits[k]/2) != ctrlAConflict.end())
+                ctrlAConflict[pCoreLits[k]/2] = true;
+              if (ctrlBConflict.find(pCoreLits[k]/2) != ctrlBConflict.end())
+                ctrlBConflict[pCoreLits[k]/2] = true;
+            }
+            /*
+            if (alpha,beta) = (0,0), x_i belongs C
+            if (alpha,beta) = (X,0), x_i belongs A, (1 means conflict, since we assume they all being 0)
+            if (alpha,beta) = (0,X), x_i belongs B
+            if (alpha,beta) = (1,1), x_i belongs either A or B (here we put it in B)
+
+            partition: {0: xC, 1: xB, 2:xA}
+            */
+            for (int k=0; k<nAigCi; ++k) {
+              if (k==i)
+                partition.push_back(1);
+              else if (k==j)
+                partition.push_back(2);
+              else if (ctrlAConflict[ctrlA[k]] && ctrlBConflict[ctrlB[k]])
+                partition.push_back(0);
+              else if (ctrlAConflict[ctrlA[k]] && !ctrlBConflict[ctrlB[k]])
+                partition.push_back(1);
+              else if (!ctrlAConflict[ctrlA[k]] && ctrlBConflict[ctrlB[k]])
+                partition.push_back(2);
+              else if (!ctrlAConflict[ctrlA[k]] && !ctrlBConflict[ctrlB[k]])
+                partition.push_back(1);
+            }
+            cout << "PO " << Abc_ObjName(pNtkObj) << " support partition: " << isExistPartition << endl;
+            for (int k = 0 ; k < partition.size() ; ++k) { cout << partition[k]; }
+            cout << endl;
+          }
+          if (isExistPartition) break;
+        }
+        if (isExistPartition) break;
+      }
+      if (!isExistPartition)
+        cout << "PO " << Abc_ObjName(pNtkObj) << " support partition: " << isExistPartition << endl;
+    }
     // end
-    Cnf_DataFree(pCnfOn);
+    Cnf_DataFree(pFcnf);
     sat_solver_delete(pSat);
   }
+  return 0;
 }
