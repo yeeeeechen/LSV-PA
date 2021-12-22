@@ -240,7 +240,7 @@ void Lsv_NtkOrBidec(Abc_Ntk_t* pNtk) {
                 assumption.push_back(Abc_Var2Lit(beta[l], 1));
               }
             } 
-            status = sat_solver_solve( pSat, &assumption[0], &assumption[0]+2*pCiNum, 0, 0, 0, 0 );
+            status = sat_solver_solve( pSat, &assumption[0], &assumption[0]+2*pCiNum, 0, 0, 0, 0 ); 
             if ( status == l_False ) {
               printf( "PO %s support partition: 1\n", Abc_ObjName(pObj));
               int* pLits;
