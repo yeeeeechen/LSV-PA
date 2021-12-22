@@ -223,61 +223,61 @@ void Lsv_NtkOrBidec(Abc_Ntk_t* pNtk) {
     }
     
     // do assumption
-    if (pCiNum == 1) {
+    if (pCiNum <= 1) {
       printf( "PO %s support partition: 0\n", Abc_ObjName(pObj));
-      continue;
-    }
-    for (size_t j=0; j<pCiNum-1; ++j) {
-      for (size_t k=j+1; k<pCiNum; ++k) {
-        for (size_t l=0; l<pCiNum; ++l) {
-          if (l == j) {
-            assumption.push_back(Abc_Var2Lit(alpha[l], 0));
-            assumption.push_back(Abc_Var2Lit(beta[l], 1));
-          } else if (l == k) {
-            assumption.push_back(Abc_Var2Lit(alpha[l], 1));
-            assumption.push_back(Abc_Var2Lit(beta[l], 0));
-          } else {
-            assumption.push_back(Abc_Var2Lit(alpha[l], 1));
-            assumption.push_back(Abc_Var2Lit(beta[l], 1));
-          }
-        } 
-        status = sat_solver_solve( pSat, &assumption[0], &assumption[0]+2*pCiNum, 0, 0, 0, 0 );
-        if ( status == l_False ) {
-          printf( "PO %s support partition: 1\n", Abc_ObjName(pObj));
-          int* pLits;
-          for (size_t m=0; m<2*pCiNum; ++m) {
-            result.push_back(0);
-          }
-          result[j] = 1;
-          result[k+pCiNum] = 1;
-          for (size_t m=0; m<sat_solver_final(pSat, &pLits); ++m){
-            result[*(pLits + m)/2-3*pVarNum-1] = 0;
-          }
-          for (size_t m=0; m<pCiNum; ++m) {
-            if(result[m] == 1 && result[m+pCiNum] == 0) {
-              printf("2");
-            } else if (result[m] == 0 && result[m+pCiNum] == 0) {
-              printf("0");
-            } else {
-              result[m] = 0;
-              printf("1");
+    } else {
+        for (size_t j=0; j<pCiNum-1; ++j) {
+          for (size_t k=j+1; k<pCiNum; ++k) {
+            for (size_t l=0; l<pCiNum; ++l) {
+              if (l == j) {
+                assumption.push_back(Abc_Var2Lit(alpha[l], 0));
+                assumption.push_back(Abc_Var2Lit(beta[l], 1));
+              } else if (l == k) {
+                assumption.push_back(Abc_Var2Lit(alpha[l], 1));
+                assumption.push_back(Abc_Var2Lit(beta[l], 0));
+              } else {
+                assumption.push_back(Abc_Var2Lit(alpha[l], 1));
+                assumption.push_back(Abc_Var2Lit(beta[l], 1));
+              }
+            } 
+            status = sat_solver_solve( pSat, &assumption[0], &assumption[0]+2*pCiNum, 0, 0, 0, 0 );
+            if ( status == l_False ) {
+              printf( "PO %s support partition: 1\n", Abc_ObjName(pObj));
+              int* pLits;
+              for (size_t m=0; m<2*pCiNum; ++m) {
+                result.push_back(0);
+              }
+              result[j] = 1;
+              result[k+pCiNum] = 1;
+              for (size_t m=0; m<sat_solver_final(pSat, &pLits); ++m){
+                result[*(pLits + m)/2-3*pVarNum-1] = 0;
+              }
+              for (size_t m=0; m<pCiNum; ++m) {
+                if(result[m] == 1 && result[m+pCiNum] == 0) {
+                  printf("2");
+                } else if (result[m] == 0 && result[m+pCiNum] == 0) {
+                  printf("0");
+                } else {
+                  result[m] = 0;
+                  printf("1");
+                }
+              }
+              printf("\n");
+              flag = 1;
+              assumption.clear();
+              break;
             }
+            assumption.clear();
+            if (flag == 1) break;
           }
-          printf("\n");
-          flag = 1;
-          assumption.clear();
-          break;
+          if (flag == 1) break;
         }
-        assumption.clear();
-        if (flag == 1) break;
+        if (flag == 0) {
+          printf( "PO %s support partition: 0\n", Abc_ObjName(pObj));
+        }
+        flag = 0;
       }
-      if (flag == 1) break;
     }
-    if (flag == 0) {
-      printf( "PO %s support partition: 0\n", Abc_ObjName(pObj));
-    }
-    flag = 0;
-  }
   
 }
 
