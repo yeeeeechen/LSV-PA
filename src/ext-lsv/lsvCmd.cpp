@@ -120,14 +120,14 @@ void Lsv_NtkPrintMsfc(Abc_Ntk_t* pNtk) {
 }
 
 void Lsv_NtkOrBidec(Abc_Ntk_t* pNtk) {
-  int i, j, POid, status, pNum = 0, pVarNum = 0, pCiNum = 0;
+  int i, j, POid = 0, status, pNum = 0, pVarNum = 0, pCiNum = 0;
   std::vector<int> vars1, vars2, vars3, alpha, beta, CiIds, result;
   Abc_Obj_t* pObj;
   Aig_Obj_t* pAigObj;
   lit Lit1[1], Lit2[3];
   int flag = 0;
   std::vector<int> assumption;
-  Abc_NtkForEachPo(pNtk, pObj, i ){
+  Abc_NtkForEachCo(pNtk, pObj, i ){
     pNum = 0;
     pCiNum = 0;
     pVarNum = 0;
@@ -140,8 +140,11 @@ void Lsv_NtkOrBidec(Abc_Ntk_t* pNtk) {
     result.clear();
     // construct cone
     Abc_Ntk_t* pNtk1 = Abc_NtkCreateCone(pNtk, Abc_ObjFanin0(pObj), Abc_ObjName(pObj), 0); 
-    Abc_Ntk_t* pAig = Abc_NtkStrash(pNtk1, 0, 0, 0);
-    Aig_Man_t* pMan = Abc_NtkToDar(pAig, 0, 0);
+    if ( Abc_ObjFaninC0(pObj) ){
+      Abc_ObjXorFaninC( Abc_NtkPo(pNtk1, 0), 0 );
+    }
+    Abc_Ntk_t* pAig = Abc_NtkStrash(pNtk1, 0, 1, 0);
+    Aig_Man_t* pMan = Abc_NtkToDar(pAig, 0, 1);
     Aig_ManForEachObj(pMan, pAigObj, j) {
       if (pAigObj->Type == 3) {
         POid = pAigObj->Id; 
@@ -177,7 +180,7 @@ void Lsv_NtkOrBidec(Abc_Ntk_t* pNtk) {
     }
    
     Lit1[0] = Abc_Var2Lit(pCnf->pVarNums[POid], 1);
-    sat_solver_addclause( pSat, Lit1, Lit1+1);
+    sat_solver_addclause(pSat, Lit1, Lit1+1);
     
     // add ~f3(x)
     Cnf_DataLift( pCnf, pVarNum);
@@ -218,8 +221,12 @@ void Lsv_NtkOrBidec(Abc_Ntk_t* pNtk) {
       Lit2[2] = Abc_Var2Lit(beta[j], 0);
       sat_solver_addclause( pSat, Lit2, Lit2+3);   
     }
-
+    
     // do assumption
+    if (pCiNum == 1) {
+      printf( "PO %s support partition: 0\n", Abc_ObjName(pObj));
+      continue;
+    }
     for (size_t j=0; j<pCiNum-1; ++j) {
       for (size_t k=j+1; k<pCiNum; ++k) {
         for (size_t l=0; l<pCiNum; ++l) {
@@ -239,10 +246,10 @@ void Lsv_NtkOrBidec(Abc_Ntk_t* pNtk) {
           printf( "PO %s support partition: 1\n", Abc_ObjName(pObj));
           int* pLits;
           for (size_t m=0; m<2*pCiNum; ++m) {
-            result.push_back(1);
+            result.push_back(0);
           }
-          result[j+pCiNum] = 0;
-          result[k] = 0;
+          result[j] = 1;
+          result[k+pCiNum] = 1;
           for (size_t m=0; m<sat_solver_final(pSat, &pLits); ++m){
             result[*(pLits + m)/2-3*pVarNum-1] = 0;
           }
@@ -258,6 +265,7 @@ void Lsv_NtkOrBidec(Abc_Ntk_t* pNtk) {
           }
           printf("\n");
           flag = 1;
+          assumption.clear();
           break;
         }
         assumption.clear();
