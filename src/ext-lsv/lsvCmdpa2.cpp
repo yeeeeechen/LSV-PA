@@ -48,6 +48,11 @@ void Lsv_OrBidec(Abc_Ntk_t* pNtk) {
 
     // store varnum(xi), (f(xi)) and varshift
     num_Pi = Aig_ManCiNum(pAig);
+    if (!(num_Pi > 1)) {
+      printf("PO %s support partition: 0\n", Abc_ObjName(pPo));
+      continue;
+    }
+    
     int* _Pi_ID = new int[num_Pi];
     Aig_ManForEachCi(pAig, pObj, j) {
       _Pi_ID[j] = pCnf->pVarNums[Aig_ObjId(pObj)];
