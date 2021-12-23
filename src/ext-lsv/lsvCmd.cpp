@@ -232,8 +232,8 @@ static inline int sat_solver_add_buffer_disable( sat_solver * pSat, int iVarA, i
 void Lsv_NtkOrBiDec(Abc_Ntk_t* pNtk){
     // extern Aig_Man_t * Abc_NtkToDar( Abc_Ntk_t * pNtk, int fExors, int fRegisters );
     Abc_Obj_t* pObj;
-    Aig_Obj_t* pAigObj;
-    int i;
+    int i, j;
+    int xi;
 
     Abc_Ntk_t* pCone;
     Aig_Man_t* pAig;
@@ -252,6 +252,15 @@ void Lsv_NtkOrBiDec(Abc_Ntk_t* pNtk){
         pfX = Cnf_Derive(pAig, Aig_ManCoNum(pAig));
         int conePO = Aig_ObjId(Aig_ManCo(pAig, 0)) / 2;
         int varNumShift = pfX->nVars;
+
+        // Collect all valid variables
+        Vec_Int_t * validVariables = Vec_IntAlloc(1);
+        for (int j = 0; j < varNumShift; ++j) {
+            if (pfX->pVarNums[j] >= 0) {
+                Vec_IntPush(validVariables, pfX->pVarNums[j]);
+            }
+        }
+        // Vec_IntPrint(validVariables); // debug
         //Create f(X') and f(X'') and complement them
         pfX_p = Cnf_DataDup(pfX);
         Cnf_DataLift(pfX_p, varNumShift);
@@ -259,19 +268,8 @@ void Lsv_NtkOrBiDec(Abc_Ntk_t* pNtk){
         pfX_pp = Cnf_DataDup(pfX);
         Cnf_DataLift(pfX_pp, 2 * varNumShift);
         // Cnf_DataPrint(pfX, 1);
-        // printf("%d %d\n", conePO, varNumShift);
-        // Cnf_DataPrint(pfX_p , 1);
-        // Cnf_DataPrint(pfX_pp, 1);
         // for (int j = 0; j < varNumShift; ++j) {
         //     printf("%d, ", pfX->pVarNums[j]);
-        // }
-        // printf("\n");
-        // for (int j = 0; j < varNumShift; ++j) {
-        //     printf("%d, ", pfX_p->pVarNums[j]);
-        // }
-        // printf("\n");
-        // for (int j = 0; j < varNumShift; ++j) {
-        //     printf("%d, ", pfX_pp->pVarNums[j]);
         // }
         // printf("\n");
         pSat = sat_solver_new();
@@ -292,12 +290,11 @@ void Lsv_NtkOrBiDec(Abc_Ntk_t* pNtk){
             return;
         }
 
-        
-        for (int j = 0; j < varNumShift; ++j) {
-            int xi = pfX->pVarNums[j];
-            if (xi < 0) continue;
-            int xi_p = xi + varNumShift, xi_pp = xi + 2 * varNumShift;
-            int alpha_i = xi + 3 * varNumShift, beta_i = xi + 4 * varNumShift;
+        Vec_IntForEachEntry(validVariables, xi, j) {
+            int xi_p    = xi +     varNumShift; 
+            int xi_pp   = xi + 2 * varNumShift;
+            int alpha_i = xi + 3 * varNumShift; 
+            int beta_i  = xi + 4 * varNumShift;
             if (!sat_solver_add_buffer_disable(pSat, xi, xi_p, alpha_i, 0)) {
                 printf("Instantiating sat_solver failed: on alpha_%d clause\n", j); 
                 Lsv_BiDecFreeData(pfX, pfX_p, pfX_pp, pSat);
@@ -309,29 +306,31 @@ void Lsv_NtkOrBiDec(Abc_Ntk_t* pNtk){
                 return; 
             }
         }
-        // printf("%d\n", sat_solver_nclauses(pSat));
-        int status = 1;
-        lit assumption[4];
-        for (int seed1 = 0; seed1 < varNumShift - 1; ++seed1) {
-            if (pfX->pVarNums[seed1] < 0) continue;
-            assumption[0] = toLitCond(pfX->pVarNums[seed1] + 3 * varNumShift, 0);
-            assumption[1] = toLitCond(pfX->pVarNums[seed1] + 4 * varNumShift, 1);
-            for (int seed2 = seed1 + 1; seed2 < varNumShift; ++seed2) {
-                if (pfX->pVarNums[seed2] < 0) continue;
-                printf("%d %d\n", pfX->pVarNums[seed1], pfX->pVarNums[seed2]);
-                assumption[2] = toLitCond(pfX->pVarNums[seed2] + 3 * varNumShift, 1);
-                assumption[3] = toLitCond(pfX->pVarNums[seed2] + 4 * varNumShift, 0);
-                // TODO: maintain assumpList based on seed1 and seed2
-                status = sat_solver_solve(pSat, assumption, assumption+4, 0, 0, 0, 0);
-                if (!status) break; // UNSAT corresponds to a viable partition
+
+        int status = l_True;
+        Vec_Int_t * vLits;
+        
+        for (int seed1 = 0; seed1 < Vec_IntSize(validVariables) - 1; ++seed1) {
+            for (int seed2 = seed1 + 1; seed2 < Vec_IntSize(validVariables); ++seed2) {
+                vLits = Vec_IntAlloc(2 * Vec_IntSize(validVariables));
+                Vec_IntForEachEntry(validVariables, xi, j) {
+                    Vec_IntPush(vLits, toLitCond(xi + 3 * varNumShift, ((j == seed1) ? 0 : 1)));
+                    Vec_IntPush(vLits, toLitCond(xi + 4 * varNumShift, ((j == seed2) ? 0 : 1)));
+                }
+                // Vec_IntPrint(vLits);
+                status = sat_solver_solve(pSat, Vec_IntArray(vLits), Vec_IntLimit(vLits), 0, 0, 0, 0);
+                if (status == l_False) {
+                    break; // UNSAT corresponds to a viable partition
+                }
 
             }
-            if (!status) break;
+            printf("%d\n", (status == l_False) ? 1 : 0);
+            if (status == l_False) break;
+            Vec_IntErase(vLits);  
         }
         
-        printf("%d\n", 1 - status);
-        if (!status) {
-
+        if (status == l_False) {
+            // TODO: Check conflict and print bidec
         }
     }
     return;
