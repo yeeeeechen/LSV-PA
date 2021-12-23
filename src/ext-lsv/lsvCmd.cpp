@@ -287,7 +287,7 @@ void print_one_ORbid(sat_solver *solver,const std::vector<int>& ais,const std::v
   }
   
 
-    //generate next  seed
+    //generate  seed
     for(int i=0;i<seeds.size();i++){
       for(int j=i+1;j<seeds.size();j++){
         seeds[i]=1;
@@ -317,6 +317,7 @@ void print_one_ORbid(sat_solver *solver,const std::vector<int>& ais,const std::v
       if(endflag)break;
     }
     if(!endflag)printf("0\n");
+    //remember to free memory(maybe)
     //delete [] assumptions;
   
 }
@@ -354,7 +355,7 @@ void lsv_print_ORbid(Abc_Ntk_t*  pNtk){
     f2Cnf = Cnf_DataDup(f1Cnf);
     liftconst=f2Cnf->nVars;
     Cnf_DataLift(f2Cnf,liftconst);
-    //todo:modify the output phase start
+    //todo:modify the output phase 
     nclasues=f2Cnf->nClauses;
     //printf("before %d",f2Cnf->pClauses[nclasues-1][0]);
     f2Cnf->pClauses[nclasues-1][0]=f2Cnf->pClauses[nclasues-1][0] ^ 1;  //change assert output 1 => output 0
@@ -393,8 +394,7 @@ void lsv_print_ORbid(Abc_Ntk_t*  pNtk){
       sat_solver_add_buffer_reverse_enable(solver,f1xis[k],f1xis[k]+liftconst,ais[k],0);
       sat_solver_add_buffer_reverse_enable(solver,f1xis[k],f1xis[k]+2*liftconst,bis[k],0);
     }
-   // printf("create buffer end\n");
-    //assume ai ,bi  incremental sat solving
+   //calculate one answer
     print_one_ORbid(solver,ais,bis);
     //sat_solver_add_const()
     /*
