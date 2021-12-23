@@ -101,12 +101,12 @@ void Lsv_OrBidec(Abc_Ntk_t* pNtk) {
       sat_solver_addclause(pSat, Lits3, Lits3+3);
 
       Lits3[0] = toLitCond(_Pi_ID[k], 0);
-      Lits3[1] = toLitCond(_Pi_ID[k]+_varShift, 1);
+      Lits3[1] = toLitCond(_Pi_ID[k]+_varShift*2, 1);
       Lits3[2] = toLitCond(beta_offset+k, 0);
       sat_solver_addclause(pSat, Lits3, Lits3+3);
 
       Lits3[0] = toLitCond(_Pi_ID[k], 1);
-      Lits3[1] = toLitCond(_Pi_ID[k]+_varShift, 0);
+      Lits3[1] = toLitCond(_Pi_ID[k]+_varShift*2, 0);
       Lits3[2] = toLitCond(beta_offset+k, 0);
       sat_solver_addclause(pSat, Lits3, Lits3+3);
     }
