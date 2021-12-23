@@ -1,0 +1,11 @@
+Benchmark,Result
+/Users/wangyiyao/bench/benchmarks/random_control/arbiter.aig,Pass
+/Users/wangyiyao/bench/benchmarks/random_control/cavlc.aig,Pass
+/Users/wangyiyao/bench/benchmarks/random_control/ctrl.aig,Pass
+/Users/wangyiyao/bench/benchmarks/random_control/dec.aig,Pass
+/Users/wangyiyao/bench/benchmarks/random_control/i2c.aig,Pass
+/Users/wangyiyao/bench/benchmarks/random_control/int2float.aig,Pass
+/Users/wangyiyao/bench/benchmarks/random_control/priority.aig,Pass
+/Users/wangyiyao/bench/benchmarks/random_control/router.aig,Pass
+/Users/wangyiyao/bench/benchmarks/arithmetic/bar.aig,Pass
+Score,100
