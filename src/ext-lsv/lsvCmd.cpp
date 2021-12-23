@@ -198,20 +198,19 @@ void Lsv_NtkOrBidec(Abc_Ntk_t* pNtk){
       }
     }
     int *Final;
-    vector<vector<int> > solution(num_sup,vector<int>(2,0));
+    vector<vector<bool> > solution(num_sup,vector<bool>(2,false));
     if(sat_res==l_False){
       int tmp=sat_solver_final(Sat, &Final);
       for(int ind=0;ind<tmp;ind++){
-        int varible=(Final[ind]/2);
-        solution[(varible-aBegin)/2][varible%2]=1;
+        solution[((Final[ind]/2)-aBegin)/2][(Final[ind]/2)%2]=true;
       }
       cout<<"PO"<<Abc_ObjName(pObj)<<"support partition: 1"<<endl;
       for(int ind=0;ind<num_sup;ind++){
-        if(solution[ind][0]==1 and solution[ind][1]==1){
+        if(solution[ind][0] and solution[ind][1]){
           cout<<"0";
-        }else if(solution[ind][0]==0 and solution[ind][1]==1){
+        }else if(!solution[ind][0] and solution[ind][1]){
           cout<<"1";
-        }else if(solution[ind][0]==1 and solution[ind][1]==0){
+        }else if(solution[ind][0] and !solution[ind][1]){
           cout<<"2";
         }else{
           cout<<"0";
