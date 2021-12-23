@@ -193,6 +193,15 @@ void Lsv_BiDecFreeData(Cnf_Dat_t * pfX, Cnf_Dat_t * pfX_p, Cnf_Dat_t * pfX_pp, s
         sat_solver_delete(pSat);
 }
 
+bool Lsv_fXtoSat(sat_solver* pSat, Cnf_Dat_t* pfX) {
+    for (int i = 0; i < pfX->nClauses; i++){
+        if (!sat_solver_addclause(pSat, pfX->pClauses[i], pfX->pClauses[i+1])){
+            return false;
+        }
+    }
+    return true;
+}
+
 static inline int sat_solver_add_buffer_disable( sat_solver * pSat, int iVarA, int iVarB, int iVarEn, int fCompl )
 {
     lit Lits[3];
@@ -234,6 +243,7 @@ void Lsv_NtkOrBiDec(Abc_Ntk_t* pNtk){
             Abc_ObjXorFaninC( Abc_NtkPo(pCone, 0), 0 );
 
         pAig = Abc_NtkToDar(pCone, 0, 0);
+        assert(Aig_ManCoNum(pAig) == 1);
         pfX = Cnf_Derive(pAig, 0); // Cnf_Derive asserts outputs to be 1 when the second parameter is 0
         int varNumShift = pfX->nVars;
         
@@ -250,12 +260,12 @@ void Lsv_NtkOrBiDec(Abc_Ntk_t* pNtk){
         
         pSat = sat_solver_new();
         sat_solver_setnvars(pSat, 5 * varNumShift); // for X, X', X'', alpha_i and beta_i
-        if (!Cnf_DataWriteIntoSolverInt(pSat, pfX   , 1, 0) ||
-            !Cnf_DataWriteIntoSolverInt(pSat, pfX_p , 1, 0) ||
-            !Cnf_DataWriteIntoSolverInt(pSat, pfX_pp, 1, 0) ){
-            printf("Instantiating sat_solver failed: in writing clauses from f(X)'s\n");
-            Lsv_BiDecFreeData(pfX, pfX_p, pfX_pp, pSat);
-            return;
+        if (!Lsv_fXtoSat(pSat, pfX   ) ||
+            !Lsv_fXtoSat(pSat, pfX_p ) ||
+            !Lsv_fXtoSat(pSat, pfX_pp) ){
+            printf("0\n");
+            // Lsv_BiDecFreeData(pfX, pfX_p, pfX_pp, pSat);
+            continue;
         }
 
         // Collect all PIs to the cone
@@ -272,13 +282,13 @@ void Lsv_NtkOrBiDec(Abc_Ntk_t* pNtk){
             int alpha_i = xi + 3 * varNumShift; 
             int beta_i  = xi + 4 * varNumShift;
             if (!sat_solver_add_buffer_disable(pSat, xi, xi_p, alpha_i, 0)) {
-                printf("Instantiating sat_solver failed: on alpha_%d clause\n", j); 
-                Lsv_BiDecFreeData(pfX, pfX_p, pfX_pp, pSat);
+                printf("0\n"); 
+                // Lsv_BiDecFreeData(pfX, pfX_p, pfX_pp, pSat);
                 return; 
             }
             if (!sat_solver_add_buffer_disable(pSat, xi, xi_pp, beta_i, 0)) {
-                printf("Instantiating sat_solver failed: on beta_%d clause\n", j); 
-                Lsv_BiDecFreeData(pfX, pfX_p, pfX_pp, pSat);
+                printf("0\n");
+                // Lsv_BiDecFreeData(pfX, pfX_p, pfX_pp, pSat);
                 return; 
             }
         }
