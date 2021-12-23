@@ -101,16 +101,16 @@ void Lsv_OrBidec(Abc_Ntk_t* pNtk) {
       sat_solver_addclause(pSat, Lits3, Lits3+3);
 
       Lits3[0] = toLitCond(_Pi_ID[k], 0);
-      Lits3[1] = toLitCond(_Pi_ID[k]+_varShift, 1);
+      Lits3[1] = toLitCond(_Pi_ID[k]+_varShift*2, 1);
       Lits3[2] = toLitCond(beta_offset+k, 0);
       sat_solver_addclause(pSat, Lits3, Lits3+3);
 
       Lits3[0] = toLitCond(_Pi_ID[k], 1);
-      Lits3[1] = toLitCond(_Pi_ID[k]+_varShift, 0);
+      Lits3[1] = toLitCond(_Pi_ID[k]+_varShift*2, 0);
       Lits3[2] = toLitCond(beta_offset+k, 0);
       sat_solver_addclause(pSat, Lits3, Lits3+3);
     }
-    // printf("final number of clause: %d \n", sat_solver_nclauses(pSat));
+    // printf("final number of variables: %d \n", sat_solver_nvars(pSat));
 
     int* assumpList = new int[num_Pi*2];
     bool unsat = false;
@@ -132,6 +132,8 @@ void Lsv_OrBidec(Abc_Ntk_t* pNtk) {
           // printf("unsat!");
           nFinal = sat_solver_final(pSat, &pFinal);
           for (int r = 0; r < nFinal; r++) {
+            // printf("pFinal: %d\n", pFinal[r]);
+            // printf("var: %d\n", Abc_Lit2Var(pFinal[r]));
             _fccLit[Abc_Lit2Var(pFinal[r])-alpha_offset] = true;
           }
           unsat = true;
