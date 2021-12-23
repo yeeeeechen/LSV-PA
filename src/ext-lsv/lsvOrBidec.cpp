@@ -30,15 +30,16 @@ bool int_in_vector(std::vector<int>& v, int i) {
 }
 
 void Lsv_NtkOrBidec(Abc_Ntk_t* pNtk) {
-  Abc_Obj_t* pPO;
-  int i_PO;
+  Abc_Obj_t* pNtk_PO;
+  int ntk_PO;
   
-  Abc_NtkForEachCo(pNtk, pPO, i_PO) {
+  Abc_NtkForEachCo(pNtk, pNtk_PO, ntk_PO) {
+    sat_solver* pSat;
+    
     // Extract the cone of the PO and its support set
     Abc_Ntk_t* pNtk_support;
-    sat_solver* pSat;
-    pNtk_support = Abc_NtkCreateCone(pNtk, Abc_ObjFanin0(pPO), Abc_ObjName(pPO), 0);
-    if (Abc_ObjFaninC0(pPO)) {
+    pNtk_support = Abc_NtkCreateCone(pNtk, Abc_ObjFanin0(pNtk_PO), Abc_ObjName(pNtk_PO), 0);
+    if (Abc_ObjFaninC0(pNtk_PO)) {
       Abc_ObjXorFaninC(Abc_NtkPo(pNtk_support, 0), 0);
     }
     pNtk_support = Abc_NtkStrash(pNtk_support, 0, 1, 0);
@@ -85,37 +86,37 @@ void Lsv_NtkOrBidec(Abc_Ntk_t* pNtk) {
     // ¬f(X')
     Cnf_DataLift(pCnf, VarShift);
     tmp_lit = Abc_Var2Lit(fX_var + VarShift, 1);
-    sat_solver_addclause(pSat, &tmp_lit, &tmp_lit+1);
+    sat_solver_addclause(pSat, tmp_f, tmp_f+1);
     for (int i = 0; i < pCnf->nClauses; ++i) {
       sat_solver_addclause(pSat, pCnf->pClauses[i], pCnf->pClauses[i+1]);
     }
 
     // ¬f(X'')
-    Cnf_DataLift(pCnf, VarShift2);
+    Cnf_DataLift(pCnf, VarShift);
     tmp_lit = Abc_Var2Lit(fX_var + VarShift2, 1);
-    sat_solver_addclause(pSat, &tmp_lit, &tmp_lit+1);
+    sat_solver_addclause(pSat, tmp_f, tmp_f+1);
     for (int i = 0; i < pCnf->nClauses; ++i) {
       sat_solver_addclause(pSat, pCnf->pClauses[i], pCnf->pClauses[i+1]);
     }
 
     // control variables
     std::vector<int> ctrl_a, ctrl_b;
-    int L = 2*list_PI.size();
-    for (int i = 0; i < L; ++i) {
+    int L_PI = list_PI.size();
+    // double
+    for (int i = 0; i < 2 * L_PI; ++i) {
       sat_solver_addvar(pSat);
     }
     int VarShift3 = 3 * VarShift;
-    L = VarShift3 + list_PI.size();
+    int L = VarShift3 + L_PI + 1;
     for (int i = VarShift3 + 1; i < L; ++i) {
       ctrl_a.push_back(i);
     }
-    L += list_PI.size();
-    for (int i = VarShift3 + list_PI.size() + 1; i < L; ++i) {
+    L += L_PI + 1;
+    for (int i = VarShift3 + L_PI + 2; i < L; ++i) {
       ctrl_b.push_back(i);
     }
 
-    L = list_PI.size();
-    for (int i = 0; i < L; ++i) {
+    for (int i = 0; i < L_PI; ++i) {
       int tmp_clause[3];
       tmp_clause[0] = Abc_Var2Lit(list_xi[i], 1);
       tmp_clause[1] = Abc_Var2Lit(list_xi_p[i], 0);
@@ -140,7 +141,7 @@ void Lsv_NtkOrBidec(Abc_Ntk_t* pNtk) {
 
     // Solve a non-trivial variable partition
     bool found_partition = false;
-    L = list_PI.size();
+    L = list_xi.size();
     if (L > 1) {
       std::vector<int> ans;
 
@@ -200,7 +201,7 @@ void Lsv_NtkOrBidec(Abc_Ntk_t* pNtk) {
 
         if (found_partition) break;
       }
-      Abc_Print(1, "PO %s support partition: %d\n", Abc_ObjName(pPO), found_partition);
+      Abc_Print(1, "PO %s support partition: %d\n", Abc_ObjName(pNtk_PO), found_partition);
       if (found_partition) {
         for (int ans_i : ans) {
           std::cout << ans_i;
@@ -208,7 +209,7 @@ void Lsv_NtkOrBidec(Abc_Ntk_t* pNtk) {
         std::cout << std::endl;
       }
     } else {
-      Abc_Print(1, "PO %s support partition: 0\n", Abc_ObjName(pPO));
+      Abc_Print(1, "PO %s support partition: 0\n", Abc_ObjName(pNtk_PO));
     }
 
   }
