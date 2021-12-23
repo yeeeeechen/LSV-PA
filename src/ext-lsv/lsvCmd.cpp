@@ -110,11 +110,9 @@ usage:
 //PA2
 void Lsv_NtkOrBidec(Abc_Ntk_t* pNtk){
   Abc_Obj_t* pObj;
+
   int i,j,k;
-  int Fx_var_num,start_id;
-  pNtk=Abc_NtkStrash(pNtk,1,1,0);
-  Abc_NtkForEachPo(pNtk,pObj,i)
-  {    
+  Abc_NtkForEachPo(pNtk,pObj,i){    
     Aig_Obj_t* supObj;
     lit literals[3];
     int *start,*end;
@@ -125,19 +123,19 @@ void Lsv_NtkOrBidec(Abc_Ntk_t* pNtk){
     Cnf_Dat_t* pCnf=Cnf_Derive(pAig,1);
     sat_solver* Sat=(sat_solver*)Cnf_DataWriteIntoSolver(pCnf,1,0);
 
-    start_id=pCnf->pVarNums[Aig_ManCo(pAig,0)->Id];
-    Fx_var_num=pCnf->nVars;
+    int start_id=pCnf->pVarNums[Aig_ManCo(pAig,0)->Id];
+    int Fx_var_num=pCnf->nVars;
 
     literals[0]=toLitCond(start_id,0);
     sat_solver_addclause(Sat,literals,literals+1);
+
     Cnf_DataLift(pCnf,Fx_var_num);
     Cnf_CnfForClause(pCnf,start,end,j)sat_solver_addclause(Sat,start,end);
-
     literals[0]=toLitCond(start_id+Fx_var_num,1);
     sat_solver_addclause(Sat,literals,literals+1);
+
     Cnf_DataLift(pCnf,Fx_var_num);
     Cnf_CnfForClause(pCnf,start,end,j)sat_solver_addclause(Sat,start,end);
-
     literals[0]=toLitCond(start_id+Fx_var_num*2,1);
     sat_solver_addclause(Sat,literals,literals+1);
 
@@ -154,28 +152,31 @@ void Lsv_NtkOrBidec(Abc_Ntk_t* pNtk){
       literals[1]=toLitCond(xp,0);
       literals[2]=toLitCond(alpha,0);
       sat_solver_addclause(Sat,literals,literals+3);
+
       literals[0]=toLitCond(x,0);
       literals[1]=toLitCond(xp,1);
       literals[2]=toLitCond(alpha,0);
       sat_solver_addclause(Sat,literals,literals+3);
+
       literals[0]=toLitCond(x,1);
       literals[1]=toLitCond(xpp,0);
       literals[2]=toLitCond(beta,0);
       sat_solver_addclause(Sat,literals,literals+3);
+
       literals[0]=toLitCond(x,0);
       literals[1]=toLitCond(xpp,1);
       literals[2]=toLitCond(beta,0);
       sat_solver_addclause(Sat,literals,literals+3);
+
     }
     int sat_res=l_True;
-    int alpha,beta;
     lit* assumplist=new lit[2*num_sup];
     for(int xi=0;xi<num_sup;xi++){
       for(int xj=xi+1;xj<num_sup;xj++){
         for(int xk=0;xk<num_sup;xk++){
 
-          alpha=aBegin+2*xk;
-          beta=aBegin+2*xk+1;
+          int alpha=aBegin+2*xk;
+          int beta=aBegin+2*xk+1;
           if(xk==xi){
             assumplist[xk]=toLitCond(alpha,0);
             assumplist[num_sup+xk]=toLitCond(beta,1);
@@ -191,15 +192,14 @@ void Lsv_NtkOrBidec(Abc_Ntk_t* pNtk){
         if(sat_res==l_False){
           break;
         }
-      
       }
       if(sat_res==l_False){
         break;
       }
     }
-    int *Final;
-    vector<vector<bool> > solution(num_sup,vector<bool>(2,false));
     if(sat_res==l_False){
+      int *Final;
+      vector<vector<bool> > solution(num_sup,vector<bool>(2,false));
       int tmp=sat_solver_final(Sat, &Final);
       for(int ind=0;ind<tmp;ind++){
         solution[((Final[ind]/2)-aBegin)/2][(Final[ind]/2)%2]=true;
@@ -222,9 +222,6 @@ void Lsv_NtkOrBidec(Abc_Ntk_t* pNtk){
     }
     delete [] assumplist;
   }
-
-
-
 }
 
 
