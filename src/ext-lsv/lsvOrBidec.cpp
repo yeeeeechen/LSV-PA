@@ -25,9 +25,11 @@ struct PackageRegistrationManager {
   PackageRegistrationManager() { Abc_FrameAddInitializer(&frame_initializer); }
 } lsvPackageRegistrationManager;
 
+
 bool int_in_vector(std::vector<int>& v, int i) {
   return std::find(v.begin(), v.end(), i) != v.end();
 }
+
 
 void Lsv_NtkOrBidec(Abc_Ntk_t* pNtk) {
   Abc_Obj_t* pNtk_PO;
@@ -52,12 +54,11 @@ void Lsv_NtkOrBidec(Abc_Ntk_t* pNtk) {
     pSat = (sat_solver*)Cnf_DataWriteIntoSolver(pCnf, 1, 0);
 
     Aig_Obj_t* pObj;
-    int i_Obj, id_PO;
+    int i_Obj, id_PO = 0;
     int VarShift = 0;
     std::vector<int> list_PI;
     Aig_ManForEachObj(pAig, pObj, i_Obj) {
       int v = pCnf->pVarNums[pObj->Id];
-      // Abc_Print(1, "v: %d, Id: %d\n", v, pObj->Id);
       if (v > VarShift) VarShift = v;
       if (Aig_ObjIsCi(pObj)) {
         list_PI.push_back(pObj->Id);
@@ -73,9 +74,6 @@ void Lsv_NtkOrBidec(Abc_Ntk_t* pNtk) {
       list_xi_p.push_back(pCnf->pVarNums[i_PI] + VarShift);
       list_xi_pp.push_back(pCnf->pVarNums[i_PI] + VarShift2);
     }
-
-    // Abc_Print(1, "\nHi before CNF\n");
-    // pSat->fPrintClause = true;
 
     // f(X)
     int fX_var = pCnf->pVarNums[id_PO];
@@ -135,9 +133,6 @@ void Lsv_NtkOrBidec(Abc_Ntk_t* pNtk) {
       tmp_clause[2] = Abc_Var2Lit(ctrl_b[i], 0);
       sat_solver_addclause(pSat, tmp_clause, tmp_clause + 3);
     }
-
-    // pSat->fPrintClause = false;
-    // Abc_Print(1, "Hi after CNF\n\n");
 
     // Solve a non-trivial variable partition
     bool found_partition = false;
@@ -214,6 +209,7 @@ void Lsv_NtkOrBidec(Abc_Ntk_t* pNtk) {
 
   }
 }
+
 
 int Lsv_CommandOrBidec(Abc_Frame_t* pAbc, int argc, char** argv) {
   Abc_Ntk_t* pNtk = Abc_FrameReadNtk(pAbc);
