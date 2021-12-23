@@ -186,22 +186,6 @@ usage:
     return 1;
 }
 
-void Lsv_CnfComplementAVariable(Cnf_Dat_t* pCnf, int theVar) {
-    for (int* pLit = pCnf->pClauses[0], *pStop = pCnf->pClauses[pCnf->nClauses]; pLit < pStop; ++pLit) {
-            if (Abc_Lit2Var(*pLit) == theVar) {
-                *pLit = Abc_LitNot(*pLit);
-            }
-    }
-}
-
-bool Lsv_fXsToSat(sat_solver * pSat, Cnf_Dat_t * pCnf) {
-    for (int i = 0; i < pCnf->nClauses; i++ ){
-        if ( !sat_solver_addclause( pSat, pCnf->pClauses[i], pCnf->pClauses[i+1] ) ){
-            return false;
-        }
-    }
-    return true;
-}
 void Lsv_BiDecFreeData(Cnf_Dat_t * pfX, Cnf_Dat_t * pfX_p, Cnf_Dat_t * pfX_pp, sat_solver * pSat) {
     Cnf_DataFree(pfX);
         Cnf_DataFree(pfX_p);
@@ -237,6 +221,7 @@ void Lsv_NtkOrBiDec(Abc_Ntk_t* pNtk){
 
     Abc_Ntk_t* pCone;
     Aig_Man_t* pAig;
+    Aig_Obj_t* pAigObj;
 
     Cnf_Dat_t* pfX, *pfX_p, *pfX_pp;
     sat_solver * pSat;
@@ -249,48 +234,39 @@ void Lsv_NtkOrBiDec(Abc_Ntk_t* pNtk){
             Abc_ObjXorFaninC( Abc_NtkPo(pCone, 0), 0 );
 
         pAig = Abc_NtkToDar(pCone, 0, 0);
-        pfX = Cnf_Derive(pAig, Aig_ManCoNum(pAig));
-        int conePO = Aig_ObjId(Aig_ManCo(pAig, 0)) / 2;
+        pfX = Cnf_Derive(pAig, 0); // Cnf_Derive asserts outputs to be 1 when the second parameter is 0
         int varNumShift = pfX->nVars;
-
-        // Collect all valid variables
-        Vec_Int_t * validVariables = Vec_IntAlloc(1);
-        for (int j = 0; j < varNumShift; ++j) {
-            if (pfX->pVarNums[j] >= 0) {
-                Vec_IntPush(validVariables, pfX->pVarNums[j]);
-            }
-        }
-        // Vec_IntPrint(validVariables); // debug
+        
         //Create f(X') and f(X'') and complement them
         pfX_p = Cnf_DataDup(pfX);
-        Cnf_DataLift(pfX_p, varNumShift);
+        Cnf_DataLift(pfX_p, varNumShift); 
 
-        pfX_pp = Cnf_DataDup(pfX);
-        Cnf_DataLift(pfX_pp, 2 * varNumShift);
-        // Cnf_DataPrint(pfX, 1);
-        // for (int j = 0; j < varNumShift; ++j) {
-        //     printf("%d, ", pfX->pVarNums[j]);
-        // }
-        // printf("\n");
+        // The last clause asserts the output to be 1
+        // This line change it to 0
+        pfX_p->pClauses[pfX_p->nClauses-1][0] ^= 1;
+
+        pfX_pp = Cnf_DataDup(pfX_p);
+        Cnf_DataLift(pfX_pp, varNumShift);
+        
         pSat = sat_solver_new();
         sat_solver_setnvars(pSat, 5 * varNumShift); // for X, X', X'', alpha_i and beta_i
-        if (!Lsv_fXsToSat(pSat, pfX)   ||
-            !Lsv_fXsToSat(pSat, pfX_p) ||
-            !Lsv_fXsToSat(pSat, pfX_pp)){
+        if (!Cnf_DataWriteIntoSolverInt(pSat, pfX   , 1, 0) ||
+            !Cnf_DataWriteIntoSolverInt(pSat, pfX_p , 1, 0) ||
+            !Cnf_DataWriteIntoSolverInt(pSat, pfX_pp, 1, 0) ){
             printf("Instantiating sat_solver failed: in writing clauses from f(X)'s\n");
             Lsv_BiDecFreeData(pfX, pfX_p, pfX_pp, pSat);
             return;
         }
 
-        if (!sat_solver_add_const(pSat, conePO, 0) || 
-            !sat_solver_add_const(pSat, conePO + varNumShift, 1) ||
-            !sat_solver_add_const(pSat, conePO + 2*varNumShift, 1)) {
-            printf("Instantiating sat_solver failed: in asserting output phase f(X)'s\n");  
-            Lsv_BiDecFreeData(pfX, pfX_p, pfX_pp, pSat);
-            return;
+        // Collect all PIs to the cone
+        Vec_Int_t * conePIs = Vec_IntAlloc(1);
+        Aig_ManForEachCi(pAig, pAigObj, j) {
+            Vec_IntPush(conePIs, pfX->pVarNums[pAigObj->Id]);
         }
 
-        Vec_IntForEachEntry(validVariables, xi, j) {
+        
+        
+        Vec_IntForEachEntry(conePIs, xi, j) {
             int xi_p    = xi +     varNumShift; 
             int xi_pp   = xi + 2 * varNumShift;
             int alpha_i = xi + 3 * varNumShift; 
@@ -310,10 +286,10 @@ void Lsv_NtkOrBiDec(Abc_Ntk_t* pNtk){
         int status = l_True;
         Vec_Int_t * vLits;
         
-        for (int seed1 = 0; seed1 < Vec_IntSize(validVariables) - 1; ++seed1) {
-            for (int seed2 = seed1 + 1; seed2 < Vec_IntSize(validVariables); ++seed2) {
-                vLits = Vec_IntAlloc(2 * Vec_IntSize(validVariables));
-                Vec_IntForEachEntry(validVariables, xi, j) {
+        for (int seed1 = 0; seed1 < Vec_IntSize(conePIs) - 1; ++seed1) {
+            for (int seed2 = seed1 + 1; seed2 < Vec_IntSize(conePIs); ++seed2) {
+                vLits = Vec_IntAlloc(2 * Vec_IntSize(conePIs));
+                Vec_IntForEachEntry(conePIs, xi, j) {
                     Vec_IntPush(vLits, toLitCond(xi + 3 * varNumShift, ((j == seed1) ? 0 : 1)));
                     Vec_IntPush(vLits, toLitCond(xi + 4 * varNumShift, ((j == seed2) ? 0 : 1)));
                 }
@@ -324,13 +300,58 @@ void Lsv_NtkOrBiDec(Abc_Ntk_t* pNtk){
                 }
 
             }
-            printf("%d\n", (status == l_False) ? 1 : 0);
             if (status == l_False) break;
             Vec_IntErase(vLits);  
         }
         
+        printf("%d\n", (status == l_False) ? 1 : 0);
         if (status == l_False) {
-            // TODO: Check conflict and print bidec
+            // Check conflict and print bidec
+            int nFinal, *pFinal;
+            nFinal = sat_solver_final(pSat, &pFinal);
+            Vec_Int_t * AlphaConflict = Vec_IntAlloc(Vec_IntSize(conePIs));
+            Vec_Int_t * BetaConflict  = Vec_IntAlloc(Vec_IntSize(conePIs));
+
+            Vec_IntForEachEntry(conePIs, xi, j) {
+                Vec_IntArray(AlphaConflict)[j] = 0;
+                Vec_IntArray(BetaConflict) [j] = 0;
+            } 
+            // Vec_IntForEachEntry(conePIs, xi, j) {
+            //     for (int tmp = 0; tmp < nFinal; ++tmp) {
+            //         int literal = Abc_Lit2Var(pFinal[tmp]);
+            //         flagA = 0; flagB = 0;
+            //         if ((xi + 3 * varNumShift) == literal) {
+            //             flagA = 1;
+                        
+            //         }
+            //         else if ((xi + 4 * varNumShift) == literal) {
+            //             flagB = 1;
+            //         }
+            //     }
+            //     Vec_IntPush(AlphaConflict, flagA);
+            //     Vec_IntPush(BetaConflict , flagB);
+            // }
+            for (int tmp = 0; tmp < nFinal; ++tmp) {
+                int literal = Abc_Lit2Var(pFinal[tmp]);
+                Vec_IntForEachEntry(conePIs, xi, j) {
+                    if (xi + 3 * varNumShift == literal) {
+                        Vec_IntArray(AlphaConflict)[j] = 1;
+                        break;
+                    }
+                    if (xi + 4 * varNumShift == literal) {
+                        Vec_IntArray(BetaConflict) [j] = 1;
+                        break;
+                    }
+                } 
+            }
+
+            Vec_IntForEachEntry(conePIs, xi, j) {
+                if (      Vec_IntArray(AlphaConflict)[j] && 
+                          Vec_IntArray(BetaConflict) [j])     printf("0");
+                else if (!Vec_IntArray(AlphaConflict)[j])     printf("1");
+                else                                          printf("2");
+            } 
+            printf("\n");
         }
     }
     return;
