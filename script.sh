@@ -1,4 +1,7 @@
 #!/bin/bash
+# how to use
+#./script.sh r10943XXX mac
+
 
 if [ "$#" -ne 2 ]; then
     echo "Usage: $0 <ALL|branch-name> <mac|linux>"
@@ -14,7 +17,7 @@ pa_dir="lsv_fall_2021/pa2"
 ref_dir="${pa_dir}/ref"
 out_dir="${pa_dir}/out"
 refprog="./abc.$2"
-bench_dir="benchmarks"
+bench_dir="../benchmarks-master"
 bench_list=("${bench_dir}/random_control/arbiter.aig" 
             "${bench_dir}/random_control/cavlc.aig"
             "${bench_dir}/random_control/ctrl.aig"
@@ -28,9 +31,10 @@ students=( $(cut -d, -f1 < lsv_fall_2021/admin/participants-id.csv | tail -n +3)
 
 
 grade_one_branch () {
+    
     student="$1"
     result="${pa_dir}/${student}.csv"
-    git switch "${student}"
+    
     rm src/ext-lsv/*.o src/ext-lsv/*.d \
         src/sat/bsat/*.o src/sat/bsat/*.d \
         src/sat/cnf/*.o src/sat/cnf/*.d \
@@ -45,7 +49,7 @@ grade_one_branch () {
     for bench in "${bench_list[@]}"; do
         echo "[INFO] Testing with ${bench} ..."
         bch_name=$(echo "${bench}" | awk -F "/" '{print $(NF)}' | sed -e 's/.aig$//')
-        timeout "${time_limit}" ./abc -c "${pa_cmd}" "${bench}" > "${out_dir}/${bch_name}.txt"
+         ./abc -c "${pa_cmd}" "${bench}" > "${out_dir}/${bch_name}.txt"
         ${refprog} -c "${checker_cmd} ${out_dir}/${bch_name}.txt" "${bench}" > "${ref_dir}/${bch_name}.txt" 
         match=$(grep -o -c "Pass!" ${ref_dir}/${bch_name}.txt )  
         if [ ${match} -eq 1 ]; then
@@ -64,27 +68,9 @@ grade_one_branch () {
 }
 
 if [ "$1" = "ALL" ]; then
-    echo "[INFO] Grading all students ..."
-    student_points=()
-    for student in "${students[@]}"; do
-        grade_one_branch "${student}" point
-        student_points+=("${point}")
-        git add -f "${pa_dir}/${student}.csv"
-        git add -f "${out_dir}" "${ref_dir}"
-        git commit -m "Grade branch ${student}"
-        git push
-        git stash push -m "Garbage from ${student}"
-    done
-    git switch master
-    all_result="${pa_dir}/ALL.csv"
-    echo "Student,Points" > "${all_result}"
-    for i in "${!students[@]}"; do
-        echo "${students[$i]},${student_points[$i]}" >> "${all_result}"
-    done
-    git add "${all_result}"
-    git commit -m "Grade the PAs of students"
-    git push
+    echo "[INFO] can't Grade all students ..."
+    
 else
-    echo "[INFO] Grading branch $1 ..."
+    echo "[INFO] Grading your $1 ..."
     grade_one_branch "$1" point 
 fi
