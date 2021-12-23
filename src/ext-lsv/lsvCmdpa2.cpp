@@ -40,25 +40,26 @@ void Lsv_OrBidec(Abc_Ntk_t* pNtk) {
   int * pBeg, * pEnd;
 
   Abc_NtkForEachPo(pNtk, pPo, i) { 
-    printf("pPo: %d\n", i);
+    // printf("pPo: %d\n", i);
     pNtkCone = Abc_NtkCreateCone(pNtk, Abc_ObjFanin0(pPo), Abc_ObjName(pPo), 0);
-    // if (Abc_ObjFaninC0(pPo)) Abc_ObjXorFaninC( Abc_NtkPo(pNtkCone, 0), 0 );
+    if (Abc_ObjFaninC0(pPo)) Abc_ObjXorFaninC( Abc_NtkPo(pNtkCone, 0), 0 );
     pAig = Abc_NtkToDar(pNtkCone, 0 , 1);
     pCnf = Cnf_Derive(pAig, Aig_ManCoNum(pAig));
 
     // store varnum(xi), (f(xi)) and varshift
-    vector<int> _Pi_ID;
+    num_Pi = Aig_ManCiNum(pAig);
+    int* _Pi_ID = new int[num_Pi];
     Aig_ManForEachCi(pAig, pObj, j) {
-      _Pi_ID.push_back(pCnf->pVarNums[pObj->Id]);
-    } // num_of_Pi = _Pi_ID.size();
-    num_Pi = _Pi_ID.size();
-    int _Po_ID = pCnf->pVarNums[Aig_ManCo(pCnf->pMan, 0)->Id];
+      _Pi_ID[j] = pCnf->pVarNums[Aig_ObjId(pObj)];
+    }
+    int _Po_ID = pCnf->pVarNums[Aig_ObjId(Aig_ManCo(pCnf->pMan, 0))];
     int _varShift = pCnf->nVars;
-    int Lits[1]; // for output
+    lit Lits[1]; // for output
     
     // f(x)
     pSat = (sat_solver*)Cnf_DataWriteIntoSolver(pCnf, 1, 0);
     Lits[0] = toLitCond(_Po_ID, 0);
+    sat_solver_addclause( pSat, Lits, Lits+1);
 
     // not f(x')
     Cnf_DataLift(pCnf, _varShift);
@@ -82,14 +83,34 @@ void Lsv_OrBidec(Abc_Ntk_t* pNtk) {
 
     // unit assumption
     sat_solver_setnvars(pSat, sat_solver_nvars(pSat)+(num_Pi*2));
-    printf("final number of variables: %d \n", sat_solver_nvars(pSat));
+    // for (int k = 0; k < num_Pi; k++) {
+    //   // alpha & beta
+    //   sat_solver_add_buffer_enable(pSat, _Pi_ID[k], _Pi_ID[k]+_varShift, alpha_offset+k, 0);
+    //   sat_solver_add_buffer_enable(pSat, _Pi_ID[k], _Pi_ID[k]+_varShift, beta_offset+k, 0);
+    // }
+    lit Lits3[3];
     for (int k = 0; k < num_Pi; k++) {
-      // alpha & beta
-      sat_solver_add_buffer_enable(pSat, _Pi_ID[k], _Pi_ID[k]+_varShift, alpha_offset+k, 0);
-      sat_solver_add_buffer_enable(pSat, _Pi_ID[k], _Pi_ID[k]+_varShift, beta_offset+k, 0);
+      Lits3[0] = toLitCond(_Pi_ID[k], 0);
+      Lits3[1] = toLitCond(_Pi_ID[k]+_varShift, 1);
+      Lits3[2] = toLitCond(alpha_offset+k, 0);
+      sat_solver_addclause(pSat, Lits3, Lits3+3);
+
+      Lits3[0] = toLitCond(_Pi_ID[k], 1);
+      Lits3[1] = toLitCond(_Pi_ID[k]+_varShift, 0);
+      Lits3[2] = toLitCond(alpha_offset+k, 0);
+      sat_solver_addclause(pSat, Lits3, Lits3+3);
+
+      Lits3[0] = toLitCond(_Pi_ID[k], 0);
+      Lits3[1] = toLitCond(_Pi_ID[k]+_varShift, 1);
+      Lits3[2] = toLitCond(beta_offset+k, 0);
+      sat_solver_addclause(pSat, Lits3, Lits3+3);
+
+      Lits3[0] = toLitCond(_Pi_ID[k], 1);
+      Lits3[1] = toLitCond(_Pi_ID[k]+_varShift, 0);
+      Lits3[2] = toLitCond(beta_offset+k, 0);
+      sat_solver_addclause(pSat, Lits3, Lits3+3);
     }
-
-
+    // printf("final number of clause: %d \n", sat_solver_nclauses(pSat));
 
     int* assumpList = new int[num_Pi*2];
     bool unsat = false;
@@ -108,7 +129,7 @@ void Lsv_OrBidec(Abc_Ntk_t* pNtk) {
 
         int status = sat_solver_solve(pSat, assumpList, (assumpList+num_Pi*2), 0, 0, 0, 0);
         if (status == l_False) { // UNSAT
-          printf("unsat!");
+          // printf("unsat!");
           nFinal = sat_solver_final(pSat, &pFinal);
           for (int r = 0; r < nFinal; r++) {
             _fccLit[Abc_Lit2Var(pFinal[r])-alpha_offset] = true;
@@ -126,8 +147,8 @@ void Lsv_OrBidec(Abc_Ntk_t* pNtk) {
         else if (_fccLit[p] == false && _fccLit[p+num_Pi] == true) printf("1"); // Xa
         else if (_fccLit[p] == true && _fccLit[p+num_Pi] == false) printf("2"); //Xb
         else printf("\nwrong :<\n");
-        printf("\n");
       }
+      printf("\n");
     }
 
     delete [] assumpList;
