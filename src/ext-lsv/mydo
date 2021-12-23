@@ -1,0 +1,2 @@
+read benchmarks/random_control/cavlc.aig
+lsv_or_bidec

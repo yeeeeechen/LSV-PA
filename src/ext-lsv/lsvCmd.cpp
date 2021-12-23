@@ -215,21 +215,20 @@ usage:
 
 int Lsv_Or_Bidec(Abc_Ntk_t* pNtk) {
   // 1. For each PO, apply Abc_NtkCreateCone() to get a (a. cone) and (b. support set)
-  Abc_Obj_t* pNtkObj;
-  Aig_Obj_t* pAigObj;
-  Abc_Ntk_t* pNtkCone;
-  Aig_Man_t* pAigCone;
-  Cnf_Dat_t* pFcnf;
-  int nVarShift;
+  static Abc_Obj_t* pNtkCo;
+  static Aig_Obj_t* pAigCi, * pAigCo;
+  static Abc_Ntk_t* pNtkCone;
+  static Aig_Man_t* pAigCone;
+  static Cnf_Dat_t* pFcnf;
   int Lits[3], status;
 
   int poId, piId;
-  Abc_NtkForEachPo(pNtk, pNtkObj, poId) {
+  Abc_NtkForEachCo(pNtk, pNtkCo, poId) {
 
     sat_solver* pSat;
 
-    pNtkCone = Abc_NtkCreateCone(pNtk, Abc_ObjFanin0(pNtkObj), Abc_ObjName(pNtkObj), 1);
-    if (Abc_ObjFaninC0(pNtkObj))// restore info of complementary edge
+    pNtkCone = Abc_NtkCreateCone(pNtk, Abc_ObjFanin0(pNtkCo), Abc_ObjName(pNtkCo), 0);
+    if (Abc_ObjFaninC0(pNtkCo))// restore info of complementary edge
       Abc_ObjXorFaninC(Abc_NtkPo(pNtkCone, 0), 0);
 
     // 2. Abc_NtkToDar() to construct Aig_Man_t from Abc_Ntk_t
@@ -237,72 +236,58 @@ int Lsv_Or_Bidec(Abc_Ntk_t* pNtk) {
     pFcnf = Cnf_Derive(pAigCone, Aig_ManCoNum(pAigCone));
 
     // 3. Construct CNF and send it to SAT_Solver
+    //    add formula of F, with positive output phase
     pSat = (sat_solver *)Cnf_DataWriteIntoSolver( pFcnf, 1, 0 );
-    unordered_map<int, int> objidToAlpha;
+    pAigCo = Aig_ManCo(pAigCone, 0); 
+    Lits[0] = toLitCond(pFcnf->pVarNums[pAigCo->Id], Aig_IsComplement(pAigCo));
+    sat_solver_addclause(pSat, Lits, Lits+1);
+
+
+    //    add formula of F(X'), F(X''), as well as negative phase of each output
+    for (int k=1; k<3; ++k) {
+      Cnf_DataLift(pFcnf, pFcnf->nVars);
+      Lits[0] = toLitCond(pFcnf->pVarNums[pAigCo->Id], (Aig_IsComplement(pAigCo)!=1));
+      sat_solver_addclause(pSat, Lits, Lits+1);
+      for (int i=0; i<pFcnf->nClauses; ++i) {
+        sat_solver_addclause( pSat, pFcnf->pClauses[i], pFcnf->pClauses[i+1] );
+      }
+    }
+
     unordered_map<int, bool> ctrlAConflict;
     vector<int> ctrlA;
-    unordered_map<int, int> objidToBeta;
     unordered_map<int, bool> ctrlBConflict;
     vector<int> ctrlB;
 
-    Aig_ManForEachCi(pAigCone, pAigObj, piId) {
+    Aig_ManForEachCi(pAigCone, pAigCi, piId) {
+      assert(Aig_ObjType(pAigCi) == AIG_OBJ_CI);
       int a = sat_solver_addvar(pSat);
       int b = sat_solver_addvar(pSat);
-      // TODO: delete objidToAlpha[pAigObj->Id]
-      objidToAlpha[pAigObj->Id] = a;
-      objidToBeta[pAigObj->Id] = b;
       ctrlA.push_back(a);
       ctrlB.push_back(b);
       ctrlAConflict[a] = false;
       ctrlBConflict[b] = false;
     }
 
-    // TODO: change to pFcnf->nVar
-    nVarShift = 0;
-    Aig_ManForEachObj(pAigCone, pAigObj, piId) {
-      if (pFcnf->pVarNums[pAigObj->Id] > nVarShift)
-        nVarShift = pFcnf->pVarNums[pAigObj->Id];
-    }
-    //    add F(X), F(X'), F(X'')
-    for (int k=0; k<3; ++k) {
-      if (k>0)
-        Cnf_DataLift(pFcnf, nVarShift);
-      for (int i=0; i<pFcnf->nClauses; ++i) {
-        if ( !sat_solver_addclause( pSat, pFcnf->pClauses[i], pFcnf->pClauses[i+1] ) )
-          {
-            Cnf_DataFree( pFcnf );
-            sat_solver_delete( pSat );
-            return -1;
-          }
-      }
-    } 
+    //    add clauses describing controlling variables, now all pFcnf are X''
+    Aig_ManForEachCi(pAigCone, pAigCi, piId) {
+      // cout << "(xi_prime2_list[i], VarShift, control_a[i]) = (" << pFcnf->pVarNums[pAigCi->Id] << ", " << pFcnf->nVars << ", " << ctrlA[piId] << ")\n";
 
-    //    add clauses to assert the output phase of each copy (posit., neg., neg.)
-    assert(Aig_ManCoNum(pAigCone) == 1);
-    pAigObj = Aig_ManCo(pAigCone, 0); 
-    Lits[0] = toLitCond(pFcnf->pVarNums[pAigObj->Id], Aig_ObjPhase(pAigObj));
-    sat_solver_addclause(pSat, Lits, Lits+1);
-    Lits[0] = toLitCond(pFcnf->pVarNums[pAigObj->Id] + nVarShift, (Aig_ObjPhase(pAigObj) != 1));
-    sat_solver_addclause(pSat, Lits, Lits+1);
-    Lits[0] = toLitCond(pFcnf->pVarNums[pAigObj->Id] + nVarShift*2, (Aig_ObjPhase(pAigObj) != 1));
-    sat_solver_addclause(pSat, Lits, Lits+1);
-
-    //    add clauses describing controlling variables
-    Aig_ManForEachCi(pAigCone, pAigObj, piId) {
-      Lits[0] = toLitCond(pFcnf->pVarNums[pAigObj->Id], 0);
-      Lits[1] = toLitCond(pFcnf->pVarNums[pAigObj->Id] + nVarShift, 1);
-      Lits[2] = toLitCond(objidToAlpha[pAigObj->Id], 0);
+      // ((X' equal X) or alpha)
+      Lits[0] = toLitCond(pFcnf->pVarNums[pAigCi->Id] - pFcnf->nVars, 0);
+      Lits[1] = toLitCond(pFcnf->pVarNums[pAigCi->Id] - pFcnf->nVars * 2, 1);
+      Lits[2] = toLitCond(ctrlA[piId], 0);
       sat_solver_addclause(pSat, Lits, Lits+3);
-      Lits[0] = toLitCond(pFcnf->pVarNums[pAigObj->Id], 1);
-      Lits[1] = toLitCond(pFcnf->pVarNums[pAigObj->Id] + nVarShift, 0);
+      Lits[0] = toLitCond(pFcnf->pVarNums[pAigCi->Id] - pFcnf->nVars, 1);
+      Lits[1] = toLitCond(pFcnf->pVarNums[pAigCi->Id] - pFcnf->nVars * 2, 0);
       sat_solver_addclause(pSat, Lits, Lits+3);
 
-      Lits[0] = toLitCond(pFcnf->pVarNums[pAigObj->Id], 0);
-      Lits[1] = toLitCond(pFcnf->pVarNums[pAigObj->Id] + nVarShift * 2, 1);
-      Lits[2] = toLitCond(objidToBeta[pAigObj->Id], 0);
+      // ((X'' equal X), beta)
+      Lits[0] = toLitCond(pFcnf->pVarNums[pAigCi->Id], 0);
+      Lits[1] = toLitCond(pFcnf->pVarNums[pAigCi->Id] - pFcnf->nVars * 2, 1);
+      Lits[2] = toLitCond(ctrlB[piId], 0);
       sat_solver_addclause(pSat, Lits, Lits+3);
-      Lits[0] = toLitCond(pFcnf->pVarNums[pAigObj->Id], 1);
-      Lits[1] = toLitCond(pFcnf->pVarNums[pAigObj->Id] + nVarShift * 2, 0);
+      Lits[0] = toLitCond(pFcnf->pVarNums[pAigCi->Id], 1);
+      Lits[1] = toLitCond(pFcnf->pVarNums[pAigCi->Id] - pFcnf->nVars * 2, 0);
       sat_solver_addclause(pSat, Lits, Lits+3);      
     }
     status = sat_solver_simplify( pSat );
@@ -311,13 +296,13 @@ int Lsv_Or_Bidec(Abc_Ntk_t* pNtk) {
     // 4. Solve a non-trival solution using Incremental SAT solving
     bool isExistPartition = false;
     int nAigCi = Aig_ManCiNum(pAigCone);
-    assert(nAigCi != 0);
+
     if (nAigCi <= 1) 
-      cout << "PO " << Abc_ObjName(pNtkObj) << " support partition: " << isExistPartition << endl;
+      cout << "PO " << Abc_ObjName(pNtkCo) << " support partition: " << isExistPartition << endl;
     else {
     //    given fixed input index i, j as seed. 
       for (int i=0; i<nAigCi - 1; ++i) {
-        for (int j=i+1; j<nAigCi; ++i) {
+        for (int j=i+1; j<nAigCi; ++j) {
           int assumpArray[nAigCi*2];
           for (int k=0; k<nAigCi; ++k) {
             // (0, 1) belongs b
@@ -360,7 +345,7 @@ int Lsv_Or_Bidec(Abc_Ntk_t* pNtk) {
             if (alpha,beta) = (0,0), x_i belongs C
             if (alpha,beta) = (X,0), x_i belongs A, (1 means conflict, since we assume they all being 0)
             if (alpha,beta) = (0,X), x_i belongs B
-            if (alpha,beta) = (1,1), x_i belongs either A or B (here we put it in B)
+            if (alpha,beta) = (1,1), x_i belongs either A or B (here we put it in A)
 
             partition: {0: xC, 1: xB, 2:xA}
             */
@@ -376,9 +361,9 @@ int Lsv_Or_Bidec(Abc_Ntk_t* pNtk) {
               else if (!ctrlAConflict[ctrlA[k]] && ctrlBConflict[ctrlB[k]])
                 partition.push_back(2);
               else if (!ctrlAConflict[ctrlA[k]] && !ctrlBConflict[ctrlB[k]])
-                partition.push_back(1);
+                partition.push_back(2);
             }
-            cout << "PO " << Abc_ObjName(pNtkObj) << " support partition: " << isExistPartition << endl;
+            cout << "PO " << Abc_ObjName(pNtkCo) << " support partition: " << isExistPartition << endl;
             for (int k = 0 ; k < partition.size() ; ++k) { cout << partition[k]; }
             cout << endl;
           }
@@ -387,7 +372,7 @@ int Lsv_Or_Bidec(Abc_Ntk_t* pNtk) {
         if (isExistPartition) break;
       }
       if (!isExistPartition)
-        cout << "PO " << Abc_ObjName(pNtkObj) << " support partition: " << isExistPartition << endl;
+        cout << "PO " << Abc_ObjName(pNtkCo) << " support partition: " << isExistPartition << endl;
     }
     // end
     Cnf_DataFree(pFcnf);
