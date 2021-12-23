@@ -1,0 +1,246 @@
+ABC command line: "lsv_or_bidec".
+
+PO po000 suppport partition: 0
+PO po001 suppport partition: 0
+PO po002 suppport partition: 0
+PO po003 suppport partition: 0
+PO po004 suppport partition: 0
+PO po005 suppport partition: 0
+PO po006 suppport partition: 0
+PO po007 suppport partition: 0
+PO po008 suppport partition: 0
+PO po009 suppport partition: 0
+PO po010 suppport partition: 0
+PO po011 suppport partition: 0
+PO po012 suppport partition: 0
+PO po013 suppport partition: 0
+PO po014 suppport partition: 0
+PO po015 suppport partition: 1
+2110100000100111100011
+PO po016 suppport partition: 1
+212222222222222222221
+PO po017 suppport partition: 0
+PO po018 suppport partition: 1
+21111111111111111112120
+PO po019 suppport partition: 0
+PO po020 suppport partition: 0
+PO po021 suppport partition: 0
+PO po022 suppport partition: 0
+PO po023 suppport partition: 0
+PO po024 suppport partition: 0
+PO po025 suppport partition: 0
+PO po026 suppport partition: 0
+PO po027 suppport partition: 0
+PO po028 suppport partition: 0
+PO po029 suppport partition: 0
+PO po030 suppport partition: 1
+201000000000000000000
+PO po031 suppport partition: 0
+PO po032 suppport partition: 0
+PO po033 suppport partition: 0
+PO po034 suppport partition: 0
+PO po035 suppport partition: 1
+200000000000000010110
+PO po036 suppport partition: 0
+PO po037 suppport partition: 0
+PO po038 suppport partition: 1
+2100
+PO po039 suppport partition: 1
+211000000000001000000
+PO po040 suppport partition: 1
+02001000002222200
+PO po041 suppport partition: 1
+00021200022220
+PO po042 suppport partition: 1
+000212000000000
+PO po043 suppport partition: 1
+00021000002222200
+PO po044 suppport partition: 1
+00020000100020
+PO po045 suppport partition: 1
+212000
+PO po046 suppport partition: 1
+211000
+PO po047 suppport partition: 1
+211000
+PO po048 suppport partition: 1
+211000
+PO po049 suppport partition: 1
+211000
+PO po050 suppport partition: 1
+211000
+PO po051 suppport partition: 1
+211000
+PO po052 suppport partition: 1
+211000
+PO po053 suppport partition: 1
+211100101011111100000
+PO po054 suppport partition: 1
+222120
+PO po055 suppport partition: 1
+211110101011111100000
+PO po056 suppport partition: 1
+211100001010111000000
+PO po057 suppport partition: 1
+211111101011111100000
+PO po058 suppport partition: 1
+210000000000000000000
+PO po059 suppport partition: 1
+210000000000000000000
+PO po060 suppport partition: 1
+211100000000001000000
+PO po061 suppport partition: 1
+211100101010111000000
+PO po062 suppport partition: 1
+211100000010011000000
+PO po063 suppport partition: 1
+211100000010001000000
+PO po064 suppport partition: 1
+210000000000000000000
+PO po065 suppport partition: 1
+211100101011111000000
+PO po066 suppport partition: 1
+2120
+PO po067 suppport partition: 1
+20100
+PO po068 suppport partition: 1
+0000002202210
+PO po069 suppport partition: 1
+22222222222222221000
+PO po070 suppport partition: 0
+PO po071 suppport partition: 1
+0002000100
+PO po072 suppport partition: 1
+0000201000
+PO po073 suppport partition: 0
+PO po074 suppport partition: 1
+00000200100020
+PO po075 suppport partition: 1
+2001
+PO po076 suppport partition: 0
+PO po077 suppport partition: 1
+212222222
+PO po078 suppport partition: 1
+212222222
+PO po079 suppport partition: 1
+212222222
+PO po080 suppport partition: 1
+212222222
+PO po081 suppport partition: 1
+210000001
+PO po082 suppport partition: 1
+210000001
+PO po083 suppport partition: 1
+212222222
+PO po084 suppport partition: 1
+212222222
+PO po085 suppport partition: 1
+212222222
+PO po086 suppport partition: 1
+212222222
+PO po087 suppport partition: 1
+210000001
+PO po088 suppport partition: 1
+210000001
+PO po089 suppport partition: 1
+210000001
+PO po090 suppport partition: 1
+210000001
+PO po091 suppport partition: 1
+210000001
+PO po092 suppport partition: 1
+210000001
+PO po093 suppport partition: 1
+200000001
+PO po094 suppport partition: 1
+200000001
+PO po095 suppport partition: 1
+200000001
+PO po096 suppport partition: 1
+200000001
+PO po097 suppport partition: 1
+200000001
+PO po098 suppport partition: 1
+2122111000
+PO po099 suppport partition: 1
+200000001
+PO po100 suppport partition: 1
+0000002012020
+PO po101 suppport partition: 1
+200000001
+PO po102 suppport partition: 1
+200000001
+PO po103 suppport partition: 1
+200000001
+PO po104 suppport partition: 1
+200000001
+PO po105 suppport partition: 1
+200000001
+PO po106 suppport partition: 1
+200000001
+PO po107 suppport partition: 1
+200000001
+PO po108 suppport partition: 1
+200000001
+PO po109 suppport partition: 1
+0200000001
+PO po110 suppport partition: 1
+210200001101
+PO po111 suppport partition: 1
+210200001101
+PO po112 suppport partition: 1
+210200001101
+PO po113 suppport partition: 1
+200000001
+PO po114 suppport partition: 1
+200000001
+PO po115 suppport partition: 1
+210200001101
+PO po116 suppport partition: 1
+2122111000
+PO po117 suppport partition: 1
+211111000
+PO po118 suppport partition: 1
+212111000
+PO po119 suppport partition: 1
+212111000
+PO po120 suppport partition: 1
+2122111000
+PO po121 suppport partition: 1
+022220222210
+PO po122 suppport partition: 1
+2122211000
+PO po123 suppport partition: 1
+2122111000
+PO po124 suppport partition: 1
+00021200
+PO po125 suppport partition: 0
+PO po126 suppport partition: 1
+0200000001
+PO po127 suppport partition: 1
+0200000001
+PO po128 suppport partition: 1
+021010
+PO po129 suppport partition: 1
+21
+PO po130 suppport partition: 1
+0200000001
+PO po131 suppport partition: 1
+0211100
+PO po132 suppport partition: 1
+21
+PO po133 suppport partition: 1
+2220210
+PO po134 suppport partition: 1
+210
+PO po135 suppport partition: 1
+21010
+PO po136 suppport partition: 0
+PO po137 suppport partition: 1
+21
+PO po138 suppport partition: 1
+21
+PO po139 suppport partition: 0
+PO po140 suppport partition: 1
+2110
+PO po141 suppport partition: 0
