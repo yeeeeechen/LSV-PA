@@ -1,0 +1,9 @@
+ABC command line: "dsec -n lsv_fall_2021/pa1/ref/sa4_ref.blif lsv_fall_2021/pa1/hw1.blif".
+
+Line 4: Skipping line ".clock clk".
+Hierarchy reader flattened 6 instances of logic boxes and left 0 black boxes.
+Line 3: Skipping line ".clock c".
+Warning: Constant-0 drivers added to 4 non-driven nets in network "serial_adder":
+d=x3, d=x4, x1, x2 ...
+Hierarchy reader flattened 1 instances of logic boxes and left 0 black boxes.
+Networks are NOT EQUIVALENT after simulation.   Time =     0.00 sec
