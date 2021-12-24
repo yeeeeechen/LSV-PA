@@ -1,2 +1,2 @@
 SRC += \
-    src/ext-lsv/lsvOrBidec.cpp
+    src/ext-lsv/lsvCmd.cpp
