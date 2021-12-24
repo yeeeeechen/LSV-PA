@@ -1,0 +1,4 @@
+ABC command line: "lsv_pa2_checker lsv_fall_2021/pa2/out/cavlc.txt".
+
+Cannot open input file "benchmarks/random_control/cavlc.aig". 
+Error: Empty network.
