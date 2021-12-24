@@ -116,16 +116,16 @@ void Lsv_NtkOrBidec(Abc_Ntk_t* pNtk){
     Aig_Obj_t* supObj;
     lit literals[3];
     int *start,*end;
+
     Abc_Ntk_t* POcone=Abc_NtkCreateCone(pNtk,Abc_ObjFanin0(pObj),Abc_ObjName(pObj),0);
     if(Abc_ObjFaninC0(pObj))Abc_ObjXorFaninC(Abc_NtkPo(POcone,0),0);
-
     Aig_Man_t* pAig=Abc_NtkToDar(POcone,0,0);
     Cnf_Dat_t* pCnf=Cnf_Derive(pAig,1);
-    sat_solver* Sat=(sat_solver*)Cnf_DataWriteIntoSolver(pCnf,1,0);
-
+    
     int start_id=pCnf->pVarNums[Aig_ManCo(pAig,0)->Id];
     int Fx_var_num=pCnf->nVars;
 
+    sat_solver* Sat=(sat_solver*)Cnf_DataWriteIntoSolver(pCnf,1,0);
     literals[0]=toLitCond(start_id,0);
     sat_solver_addclause(Sat,literals,literals+1);
 
@@ -139,33 +139,33 @@ void Lsv_NtkOrBidec(Abc_Ntk_t* pNtk){
     literals[0]=toLitCond(start_id+Fx_var_num*2,1);
     sat_solver_addclause(Sat,literals,literals+1);
 
-    int aBegin=sat_solver_nvars(Sat);
+    int a_start=sat_solver_nvars(Sat);
     int num_sup =Aig_ManCiNum(pAig);
 
     Aig_ManForEachCi(pAig,supObj,k){
-      int alpha=sat_solver_addvar(Sat);
-      int beta=sat_solver_addvar(Sat);
+      int ai=sat_solver_addvar(Sat);
+      int bi=sat_solver_addvar(Sat);
       int x=pCnf->pVarNums[Aig_ObjId(supObj)]-2*Fx_var_num;
       int xp=x+Fx_var_num;
       int xpp=x+Fx_var_num*2;
       literals[0]=toLitCond(x,1);
       literals[1]=toLitCond(xp,0);
-      literals[2]=toLitCond(alpha,0);
+      literals[2]=toLitCond(ai,0);
       sat_solver_addclause(Sat,literals,literals+3);
 
       literals[0]=toLitCond(x,0);
       literals[1]=toLitCond(xp,1);
-      literals[2]=toLitCond(alpha,0);
+      literals[2]=toLitCond(ai,0);
       sat_solver_addclause(Sat,literals,literals+3);
 
       literals[0]=toLitCond(x,1);
       literals[1]=toLitCond(xpp,0);
-      literals[2]=toLitCond(beta,0);
+      literals[2]=toLitCond(bi,0);
       sat_solver_addclause(Sat,literals,literals+3);
 
       literals[0]=toLitCond(x,0);
       literals[1]=toLitCond(xpp,1);
-      literals[2]=toLitCond(beta,0);
+      literals[2]=toLitCond(bi,0);
       sat_solver_addclause(Sat,literals,literals+3);
 
     }
@@ -175,17 +175,17 @@ void Lsv_NtkOrBidec(Abc_Ntk_t* pNtk){
       for(int xj=xi+1;xj<num_sup;xj++){
         for(int xk=0;xk<num_sup;xk++){
 
-          int alpha=aBegin+2*xk;
-          int beta=aBegin+2*xk+1;
+          int ai=a_start+2*xk;
+          int bi=a_start+2*xk+1;
           if(xk==xi){
-            assumplist[xk]=toLitCond(alpha,0);
-            assumplist[num_sup+xk]=toLitCond(beta,1);
+            assumplist[xk]=toLitCond(ai,0);
+            assumplist[num_sup+xk]=toLitCond(bi,1);
           }else if(xk==xj){
-            assumplist[xk]=toLitCond(alpha,1);
-            assumplist[num_sup+xk]=toLitCond(beta,0);
+            assumplist[xk]=toLitCond(ai,1);
+            assumplist[num_sup+xk]=toLitCond(bi,0);
           }else{
-            assumplist[xk]=toLitCond(alpha,1);
-            assumplist[num_sup+xk]=toLitCond(beta,1);
+            assumplist[xk]=toLitCond(ai,1);
+            assumplist[num_sup+xk]=toLitCond(bi,1);
           }
         }
         sat_res=sat_solver_solve(Sat,assumplist,assumplist+2*num_sup,0,0,0,0);
@@ -199,18 +199,18 @@ void Lsv_NtkOrBidec(Abc_Ntk_t* pNtk){
     }
     if(sat_res==l_False){
       int *Final;
-      vector<vector<bool> > solution(num_sup,vector<bool>(2,false));
       int tmp=sat_solver_final(Sat, &Final);
+      vector<vector<bool> > partition(num_sup,vector<bool>(2,false));
       for(int ind=0;ind<tmp;ind++){
-        solution[((Final[ind]/2)-aBegin)/2][(Final[ind]/2)%2]=true;
+        partition[((Final[ind]/2)-a_start)/2][(Final[ind]/2)%2]=true;
       }
       cout<<"PO"<<Abc_ObjName(pObj)<<"support partition: 1"<<endl;
       for(int ind=0;ind<num_sup;ind++){
-        if(solution[ind][0] and solution[ind][1]){
+        if(partition[ind][0] and partition[ind][1]){
           cout<<"0";
-        }else if(!solution[ind][0] and solution[ind][1]){
+        }else if(!partition[ind][0] and partition[ind][1]){
           cout<<"1";
-        }else if(solution[ind][0] and !solution[ind][1]){
+        }else if(partition[ind][0] and !partition[ind][1]){
           cout<<"2";
         }else{
           cout<<"0";
