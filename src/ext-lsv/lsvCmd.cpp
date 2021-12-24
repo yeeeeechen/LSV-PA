@@ -230,8 +230,6 @@ void Lsv_OrBidec( Abc_Ntk_t *pNtk ) {
 
 	Abc_Obj_t *pCo;
 
-	int nPI = Abc_NtkPiNum( pNtk );
-
 	int i;
 	Abc_NtkForEachCo( pNtk, pCo, i) {
 
@@ -243,9 +241,11 @@ void Lsv_OrBidec( Abc_Ntk_t *pNtk ) {
 		printf( "PO %s support partition: ", Abc_ObjName(pCo) );
 
 		// convert CNF
-		pCone = Abc_NtkCreateCone( pNtk, Abc_ObjFanin0(pCo), Abc_ObjName(pCo), 1 );
+		pCone = Abc_NtkCreateCone( pNtk, Abc_ObjFanin0(pCo), Abc_ObjName(pCo), 0 );
         if ( Abc_ObjFaninC0(pCo) )
             Abc_ObjXorFaninC( Abc_NtkPo(pCone, 0), 0 );
+
+		int nPI = Abc_NtkPiNum( pCone );
 
 		pAig = Abc_NtkToDar( pCone, 0, 0 );
 		pCnf = Cnf_Derive( pAig, 1 );
@@ -284,6 +284,7 @@ void Lsv_OrBidec( Abc_Ntk_t *pNtk ) {
 		assumpList[nPI*2+1] = toLitCond(varPO + nVarF, 1);
 		assumpList[nPI*2+2] = toLitCond(varPO + 2*nVarF, 1);
 
+		// put all X into C
 		for( int k = 0; k < nPI; k++ ) {
 			assumpList[k] = toLitCond( varAlpha + k, 0 );
 			assumpList[k+nPI] = toLitCond( varBeta + k, 0 );
