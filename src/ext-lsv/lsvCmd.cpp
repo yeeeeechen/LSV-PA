@@ -1,6 +1,7 @@
 #include "base/abc/abc.h"
 #include "base/main/main.h"
 #include "base/main/mainInt.h"
+#include "sat/cnf/cnf.h"
 #include <set>
 #include <vector>
 #include <list>
@@ -12,12 +13,18 @@
 #include <typeinfo>
 
 using namespace std;
+extern "C"  Aig_Man_t * Abc_NtkToDar(Abc_Ntk_t * pNtk,int fExors,int fRegisters);
+  
+
 static int Lsv_CommandPrintNodes(Abc_Frame_t* pAbc, int argc, char** argv);
-static int Lsv_CommandMFFC(Abc_Frame_t* pAbc, int argc, char** argv);
+
+static int Lsv_CommandA(Abc_Frame_t* pAbc, int argc, char** argv);
 
 void init(Abc_Frame_t* pAbc) {
   Cmd_CommandAdd(pAbc, "LSV", "lsv_print_nodes", Lsv_CommandPrintNodes, 0);
-  Cmd_CommandAdd(pAbc, "LSV", "lsv_print_msfc", Lsv_CommandMFFC, 0);
+  
+  Cmd_CommandAdd(pAbc, "LSV", "lsv_or_bidec", Lsv_CommandA, 0);
+
 }
 
 void destroy(Abc_Frame_t* pAbc) {}
@@ -29,103 +36,7 @@ struct PackageRegistrationManager {
 } lsvPackageRegistrationManager;
 
 
-class Graph{
-private:
-    int num_vertex;
-    std::vector< std::list<int> > AdjList;
-    int *color,             // 0:white, 1:gray, 2:black
-        *predecessor,
-        *distance,          // for BFS()
-        *discover,          // for DFS()
-        *finish;
-public:
-    Graph():num_vertex(0){};
-    Graph(int N):num_vertex(N){
-        // initialize Adj List
-        AdjList.resize(num_vertex);
-    };
-    void AddEdgeList(int from, int to);
-        
-    void DFS(int Start);
-    void DFSVisit(int vertex, int &time);
 
-    void CCDFS(int vertex,int num11,std::map < int,string > nodemap);                // 利用DFS 
-                // 利用BFS, 兩者邏輯完全相同
-    void SetCollapsing(int vertex);
-                   // 印出predecessor, 供驗証用, 非必要
-};
-void Graph::AddEdgeList(int from, int to){
-    AdjList[from].push_back(to);
-}
-void Graph::DFS(int Start){
-    color = new int[num_vertex];           // 配置記憶體位置
-    discover = new int[num_vertex];
-    finish = new int[num_vertex];
-    predecessor = new int[num_vertex];
-
-    int time = 0;                          // 初始化, 如圖三(b)
-    for (int i = 0; i < num_vertex; i++) { 
-        color[i] = 0;
-        discover[i] = 0;
-        finish[i] = 0;
-        predecessor[i] = -1;
-    }
-
-    int i = Start;
-    for (int j = 0; j < num_vertex; j++) { // 檢查所有Graph中的vertex都要被搜尋到
-        if (color[i] == 0) {               // 若vertex不是白色, 則進行以該vertex作為起點之搜尋
-            DFSVisit(i, time);
-        }
-        i = j;                             // j會把AdjList完整走過一遍, 確保所有vertex都被搜尋過
-    }
-}
-
-void Graph::DFSVisit(int vertex, int &time){   // 一旦有vertex被發現而且是白色, 便進入DFSVisit()
-    color[vertex] = 1;                         // 把vertex塗成灰色
-    discover[vertex] = ++time;                 // 更新vertex的discover時間
-    for (std::list<int>::iterator itr = AdjList[vertex].begin();   // for loop參數太長
-         itr != AdjList[vertex].end(); itr++) {                    // 分成兩段
-        if (color[*itr] == 0) {                // 若搜尋到白色的vertex
-            predecessor[*itr] = vertex;        // 更新其predecessor
-            DFSVisit(*itr, time);              // 立刻以其作為新的搜尋起點, 進入新的DFSVisit()
-        }
-    }
-    color[vertex] = 2;                         // 當vertex已經搜尋過所有與之相連的vertex後, 將其塗黑
-    finish[vertex] = ++time;                   // 並更新finish時間
-}
-void Graph::SetCollapsing(int current){
-    int root;  // root
-    for (root = current; predecessor[root] >= 0; root = predecessor[root]);
-
-    while (current != root) {
-        int parent = predecessor[current];
-        predecessor[current] = root;
-        current = parent;
-    }
-}
-
-void Graph::CCDFS(int vertex = 0,int num11 = 0, std::map <int,string> nodemap = {}){
-
-    DFS(vertex);      // 
-    
-    for (int i = 0; i< num_vertex; i++){
-        SetCollapsing(i);
-    }
-    
-
-    int num_cc = 0;
-    for (int i = 0; i < num_vertex; i++) {
-        if (predecessor[i] < 0 && i >= num11) {
-            std::cout << "MSFC " << num_cc++ << ": " << nodemap[i] ;
-            for (int j = 0; j < num_vertex; j++) {
-                if (predecessor[j] == i) {
-                    std::cout << ","<<        nodemap[j] ;
-                }
-            }
-            std::cout << std::endl;
-        }
-    }
-}
 
 
 void Lsv_NtkPrintNodes(Abc_Ntk_t* pNtk) {
@@ -174,134 +85,198 @@ bool cmp1(std::pair<int,int>a,std::pair<int,int>b)
 {
     return a.first < b.first;
 }
-int Lsv_CommandMFFC(Abc_Frame_t* pAbc, int argc, char** argv) {
-  Abc_Ntk_t* pNtk = Abc_FrameReadNtk(pAbc);
-  int c;
-  Extra_UtilGetoptReset();
-  while ((c = Extra_UtilGetopt(argc, argv, "h")) != EOF) {
-    
-  }
-  if (!pNtk) {
-    Abc_Print(-1, "Empty network.\n");
-    return 1;
-  }
-  //main
-  Abc_Obj_t* pObj;
-  int i;
-  //static int 14 = Abc_NtkNodeNum(pNtk);
-  std::vector <int> if_two_fanout;
-  std::vector <std::pair<int,int> > big_set;
-  std::vector <int> boom;
-  std::map<int, std::string> nodemap;
-  int num11 = Abc_NtkObjNum(pNtk) - Abc_NtkNodeNum(pNtk) ;
-  //std::cout<<num11;
-  //Abc_NtkIncrementTravId(pNtk);
-  int node_num = Abc_NtkObjNum(pNtk);
-  Abc_NtkForEachNode(pNtk, pObj, i) {
-    //printf("Object Id = %d, name = %s\n", Abc_ObjId(pObj), Abc_ObjName(pObj));
-    nodemap.insert(std::pair<int, std::string>(Abc_ObjId(pObj), Abc_ObjName(pObj)));
-    std::pair<int,int> aig_set;
-    aig_set.first=(Abc_ObjId(pObj));
-    Abc_Obj_t* pFanin;
-    int j;
-    Abc_ObjForEachFanin(pObj, pFanin, j) {
-      //printf("  Fanin-%d: Id = %d, name = %s\n", j, Abc_ObjId(pFanin),
-      //       Abc_ObjName(pFanin));
-      if (!Abc_ObjIsPi(pFanin)){
 
-        {
+
+int Lsv_CommandA(Abc_Frame_t* pAbc, int argc, char** argv) {
+    Abc_Ntk_t* pNtk = Abc_FrameReadNtk(pAbc);
+    
+    Abc_Obj_t* pObj;
+    Abc_Ntk_t * pNtkOn1;
+    sat_solver * pSat;
+    Cnf_Dat_t * pCnf;
+    Aig_Man_t* pMan;
+    int i;
+    Abc_NtkForEachPo(pNtk,pObj,i){
+      
+      pNtkOn1 = Abc_NtkCreateCone( pNtk, Abc_ObjFanin0(pObj), Abc_ObjName(pObj), 0 );
+      if ( Abc_ObjFaninC0(pObj) )
+          Abc_ObjXorFaninC( Abc_NtkPo(pNtkOn1, 0), 0 );
+      pMan = Abc_NtkToDar(pNtkOn1,0,0);
+      pCnf = Cnf_Derive( pMan, 1 );
+      pSat = (sat_solver *)Cnf_DataWriteIntoSolver(pCnf,1,0);
+      const int nInitVars = pCnf->nVars;//varshift
+      const int nCi = Aig_ManCiNum(pMan);
+      sat_solver_setnvars(pSat, 3*nInitVars+2*nCi);
+
+
+      
+      Aig_Obj_t * pObj_Ci;
+      
+      
+      
+      int j;
+      
+      
+      
+      
+      
+      lit Lits[3];
+     
+      int PO_var_num = pCnf->pVarNums[Aig_ManCo(  pMan,0 )->Id];
+      Lits[0] = toLitCond(PO_var_num,0);
+      sat_solver_addclause(pSat,Lits,Lits+1);//FX
+
+      
+      Cnf_DataLift(pCnf,nInitVars);
+      for (int r = 0; r < pCnf->nClauses; r++ )
+      sat_solver_addclause( pSat, pCnf->pClauses[r], pCnf->pClauses[r+1] );//FX
+      int PO_var_num1 = pCnf->pVarNums[Aig_ManCo(  pMan,0 )->Id];
+      Lits[0] = toLitCond(PO_var_num1,1);
+      sat_solver_addclause(pSat,Lits,Lits+1);//FX'
+      Cnf_DataLift(pCnf,nInitVars);
+      for (int r = 0; r < pCnf->nClauses; r++ )
+      sat_solver_addclause( pSat, pCnf->pClauses[r], pCnf->pClauses[r+1] );//FX'
+      int PO_var_num2 = pCnf->pVarNums[Aig_ManCo(  pMan,0 )->Id];
+      Lits[0] = toLitCond(PO_var_num2,1);
+      sat_solver_addclause(pSat,Lits,Lits+1);//FX''
+      int alpha  = 3*(nInitVars)+1,
           
-          if (std::find(if_two_fanout.begin(), if_two_fanout.end(),Abc_ObjId(pFanin))!=if_two_fanout.end())
-          {
-            //std::cout<<Abc_ObjId(pFanin)<<std::endl;
-            //boom.push_back(Abc_ObjId(pFanin));
-            for (int i  = 0; i< big_set.size();i++){
-              if(big_set[i].second == Abc_ObjId(pFanin)) big_set.erase(big_set.begin()+i);
-            }
+          id1st, id2nd, id3rd;
+
+      
+      Aig_ManForEachCi( pMan, pObj_Ci, j ){//Ci
+        id3rd = pCnf->pVarNums[pObj_Ci->Id];
+        id2nd = id3rd - nInitVars;
+        id1st = id2nd - nInitVars;
+
+        
+        int Cid;
+        lit Lits2 [4];
+        Lits2[0] = toLitCond( id1st, 0 );
+        Lits2[1] = toLitCond( id2nd, 1 );
+        Lits2[2] = toLitCond( alpha, 0 );
+        Cid = sat_solver_addclause( pSat, Lits2, Lits2 + 3 );
+        assert( Cid );
+
+        Lits2[0] = toLitCond( id1st, 1 );
+        Lits2[1] = toLitCond( id2nd, 0 );
+        Lits2[2] = toLitCond( alpha, 0 );
+        Cid = sat_solver_addclause( pSat, Lits2, Lits2 + 3 );
+        assert( Cid );
+        alpha++;
+        
+        Lits2[0] = toLitCond( id1st, 0 );
+        Lits2[1] = toLitCond( id3rd, 1 );
+        Lits2[2] = toLitCond( alpha, 0 );
+        Cid = sat_solver_addclause( pSat, Lits2, Lits2 + 3 );
+        assert( Cid );
+
+        Lits2[0] = toLitCond( id1st, 1 );
+        Lits2[1] = toLitCond( id3rd, 0 );
+        Lits2[2] = toLitCond( alpha, 0 );
+        Cid = sat_solver_addclause( pSat, Lits2, Lits2 + 3 );
+        assert( Cid );
+        alpha++;
+      }
+      // for ( int m = 0;m< varshift;m++){
+      //       Lits[0] = unit_assumption[m].first;
+      //       Lits[1] = toLitCond(PI_var_num[m],1);
+      //       Lits[2] = toLitCond(PI_var_num[m]+varshift,0);
+      //       sat_solver_addclause(pSat,Lits,Lits+3);
+      //       Lits[0] = unit_assumption[m].first;
+      //       Lits[1] = toLitCond(PI_var_num[m],0);
+      //       Lits[2] = toLitCond(PI_var_num[m]+varshift,1);
+      //       sat_solver_addclause(pSat,Lits,Lits+3);
+      //     }
+      //     for (int m = 0;m< varshift;m++){
+      //       Lits[0] = unit_assumption[m].second;
+      //       Lits[1] = toLitCond(PI_var_num[m],1);
+      //       Lits[2] = toLitCond(PI_var_num[m]+2*varshift,0);
+      //       sat_solver_addclause(pSat,Lits,Lits+3);
+      //       Lits[0] = unit_assumption[m].second;
+      //       Lits[1] = toLitCond(PI_var_num[m],0);
+      //       Lits[2] = toLitCond(PI_var_num[m]+2*varshift,1);
+      //       sat_solver_addclause(pSat,Lits,Lits+3);
+      //     }
+      //Aig_ManForEachCi( pMan, pObj_Ci,  j ){
+      //  PI_var_num[z] = pCnf->pVarNums[pObj_Ci->Id];
+      //  z++;
+      //}
+
+      lit Lits1 [2*nCi];    
+      for (int m = 0;m<2*nCi;++m){
+        Lits1[m] = toLitCond( (3*nInitVars + m + 1), 1 );
+      }
+
+
+
+
+
+      //int varshift = sat_solver_nvars(pSat);
+      //
+      //
+      //
+      //int PO_var_num1 = PO_var_num + varshift;
+      //int PO_var_num2 = PO_var_num1 + varshift;
+      
+      
+      
+      
+      //Cnf_Dat_t * pCnf2 = Cnf_DataDup(pCnf);
+      //Cnf_DataLift(pCnf2,varshift);
+      //Cnf_DataLift(pCnf2,varshift);
+      //Lits[0] = toLitCond(PO_var_num2,1);
+      //sat_solver_addclause(pSat,Lits,Lits+1);
+      lbool status = l_Undef;
+      //std::vector<std::pair<int,int>> unit_assumption(varshift, std::make_pair(0, 0));//first = alpha ,second = beta;
+      for (int k = 1;k < nCi;++k){
+        for (int l = 0;l < k; ++l){
+          Lits1[ 2*k   ]--; 
+          Lits1[(2*l)+1]--; 
+          
+          status = sat_solver_solve(pSat,Lits1,Lits1+2*nCi,0,0,0,0);
+          Lits1[ 2*k   ]++; 
+          Lits1[(2*l)+1]++; 
+          if (status == l_False){
+            break;
           }
-          
-          else
-          {
-            aig_set.second = (Abc_ObjId(pFanin));
-            big_set.push_back(aig_set);
-            if_two_fanout.push_back(Abc_ObjId(pFanin));
-          }
-          
           
           
         }
+        if (status == l_False){
+            break;
+        }
+      }
+
+      if(status==l_False){
+        
+        std::cout<<"PO "<<Abc_ObjName(pObj)<<" support partition: 1"<<std::endl;
+
+        for(j=0; j<2*nCi; ++j){ Lits1[j] = 1; }
+
+        int *pClauses, *vartolit, *end;
+        int nFinalClause = sat_solver_final(pSat, &pClauses);
+        
+        
+
+        for(j=0; j<nFinalClause; j++){
+          for ( vartolit = &pClauses[j], end = &pClauses[j+1]; vartolit < end; vartolit++ ){
+            Lits1[Abc_Lit2Var(*vartolit)-(nInitVars*3)-1]=0;
+          } 
+        }
+
+        
+        for(j=0; j<nCi; ++j){
+          if     (Lits1[(2*j)]==0 && Lits1[(2*j)+1]==1) std::cout<<"1"; 
+          else if(Lits1[(2*j)]==1 && Lits1[(2*j)+1]==0) std::cout<<"2"; 
+          else  std::cout<<"0"; 
+        }
+        std::cout<<std::endl;
+      }
+      else{
+        std::cout<<"PO "<<Abc_ObjName(pObj)<<" support partition: 0"<<std::endl;
       }
     }
-    //std::vector<std::set<int> >::iterator it_i_2;
-    //std::set <int>::iterator it;
-    //for (it = aig_set.begin(); it != aig_set.end(); ++it) {
-    //  for(it_i_2=big_set.begin(); it_i_2!=big_set.end(); ++it_i_2)
-    //  {
-    //    if(*it_i.count(*it) ){
-    //      std::set <int> concat_set;
-    //      std::set_union(*it_i.begin(), *it_i.end(),
-    //            *it.begin(), *it.end(),
-    //            std::inserter(concat_set, concat_set.begin()));
-    //      
-    //    }
-    //  }
-    //  
-    //}
     
-    
-  }
-  //graph start
-  
-  Graph g3(node_num);
-
-
-  
-//   for(int lp = 0; lp<big_set.size(); lp++){
-//     set<int>::iterator it1;
-//     for (it1 = big_set[lp].begin(); it1 != big_set[lp].end(); it1 ++)
-// {
-//     cout << *it1 <<" ";
-// }
-// std::cout<<std::endl;
-//   }
-    
-  
-  //boom.clear();
-  if_two_fanout.clear();
-  std::vector<std::pair<int, int> > vec;
-  for( int op = 0; op<big_set.size(); op++){
-    //if (big_set[op].size() >1) {
-      //std::cout<<*(big_set[op].begin())<<" "<<*(++(big_set[op].begin()))<<std::endl;
-      vec.push_back(std::make_pair(big_set[op].first,big_set[op].second));
-      vec.push_back(std::make_pair(big_set[op].second,big_set[op].first));
-      
-    //}
-    //if (big_set[op].size() == 3){
-    //  g3.AddEdgeList(*(big_set[op].begin())-num11, *(++(big_set[op].begin()))-num11);
-    //  g3.AddEdgeList(*(++(big_set[op].begin()))-num11, *(--(big_set[op].end()))-num11);
-    //  //std::cout<<*(big_set[op].begin())<<" "<<*(++(big_set[op].begin()))<<std::endl;
-    //  //std::cout<<*(++(big_set[op].begin()))<<" "<<*(--(big_set[op].end()))<<std::endl;
-    //} 
-    //std::cout<<"Next set"<<std::endl;
-        
-       // if(itr!=(*it_i).end() && p < (*it_i).size()){    
-       //   //g3.AddEdgeList(*itr++, *itr); 
-       //   itr--;
-       // }
-  }
-  
-  sort(vec.begin(), vec.end(), cmp1);
-  for (int re = 0; re<vec.size();re++){
-    g3.AddEdgeList(vec[re].first,vec[re].second);
-    //std::cout<<vec[re].first<< " "<<vec[re].second<<std::endl;
-  }
-  big_set.clear();
-  //big_set.shrink_to_fit();   
-  
-  //std::cout<<node_num;
-  g3.CCDFS(0,num11,nodemap);
-  //std::cout<<node_num<<"  "<<num11<<" ";
-  return 0;
-
-
+    return 0;
 }
