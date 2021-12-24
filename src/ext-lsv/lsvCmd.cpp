@@ -1,13 +1,22 @@
 #include "base/abc/abc.h"
 #include "base/main/main.h"
 #include "base/main/mainInt.h"
+#include "sat/cnf/cnf.h"
+#include "sat/bsat/satSolver.h"
+#include <vector>
+using namespace std;
 
 static int Lsv_CommandPrintNodes(Abc_Frame_t* pAbc, int argc, char** argv);
 static int Lsv_CommandPrintMSFC (Abc_Frame_t* pAbc, int argc, char** argv);
+static int Lsv_CommandOrBiDec (Abc_Frame_t* pAbc, int argc, char** argv);
+
+
+extern "C" Aig_Man_t * Abc_NtkToDar( Abc_Ntk_t * pNtk, int fExors, int fRegisters );
 
 void init(Abc_Frame_t* pAbc) {
   Cmd_CommandAdd(pAbc, "LSV", "lsv_print_nodes", Lsv_CommandPrintNodes, 0);
   Cmd_CommandAdd(pAbc, "LSV", "lsv_print_msfc", Lsv_CommandPrintMSFC, 0);
+  Cmd_CommandAdd(pAbc, "LSV", "lsv_or_bidec", Lsv_CommandOrBiDec, 0);
 }
 
 void destroy(Abc_Frame_t* pAbc) {}
@@ -17,6 +26,9 @@ Abc_FrameInitializer_t frame_initializer = {init, destroy};
 struct PackageRegistrationManager {
   PackageRegistrationManager() { Abc_FrameAddInitializer(&frame_initializer); }
 } lsvPackageRegistrationManager;
+
+//helper function
+
 
 void Lsv_NtkPrintNodes(Abc_Ntk_t* pNtk) {
   Abc_Obj_t* pObj;
@@ -147,7 +159,6 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk){
   int i, j;
   msfcVec = Lsv_AigMSFC(pNtk);
   Vec_PtrSort(msfcVec, (int (*)(const void *, const void *)) Lsv_VecPtrSortCompare2);
-  // TODO print out
   Vec_PtrForEachEntry( Vec_Ptr_t*, msfcVec, pVec, i ){
     printf("MSFC %d: ", i);
     Vec_PtrForEachEntry( Abc_Obj_t*, pVec, pNode, j ){
@@ -157,6 +168,152 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk){
     printf("\n");
   }
 }
+/***********************************/
+/*********** PA2 begin *************/
+/***********************************/
+
+
+void Lsv_NtkPrintOrBiDec(Abc_Ntk_t* pNtk){
+  int i;
+  Abc_Obj_t* pCo;
+  // for each PO
+  Abc_NtkForEachPo(pNtk, pCo, i){
+    printf("PO %s support partition: ", Abc_ObjName(pCo));
+    Abc_Ntk_t* pCone = Abc_NtkCreateCone(pNtk, Abc_ObjFanin0(pCo), Abc_ObjName(pCo), 0);
+    if(Abc_ObjFaninC0(pCo))
+      Abc_ObjXorFaninC( Abc_NtkPo(pCone, 0), 0);
+    // create its fanin aig
+    Aig_Man_t* pMan = Abc_NtkToDar(pCone, 0, 1);
+    Cnf_Dat_t* pCnf = Cnf_Derive(pMan, 1);
+    int varNum = pCnf->nVars;
+    int piNum = Aig_ManCiNum(pMan);
+    Aig_Obj_t* pPO = Aig_ManCo(pMan, 0);
+    // write f(x) into solver
+    // x_i => var(x_i) , 
+    // var(x'_i)    = var(x_i) + 1*varNum
+    // var(x''_i)   = var(x_i) + 2*varNum
+
+    int aigNumMax = Aig_ManObjNumMax(pMan);
+    // int* pID2Var = new int[aigNumMax];
+    // memcpy( pID2Var, pCnf->pVarNums, sizeof(int) * aigNumMax );
+    vector<int> pID2Var(aigNumMax, -1);
+    for(int j=0; j<aigNumMax;++j) pID2Var[j] = pCnf->pVarNums[j];
+
+
+    sat_solver* pSolver = (sat_solver*) Cnf_DataWriteIntoSolver(pCnf, 1, 0);
+
+    // add f(x') and f(x'')
+    Cnf_DataLift(pCnf, varNum);
+    int _;
+    int* beg; int* end;
+    Cnf_CnfForClause(pCnf, beg, end, _)
+      sat_solver_addclause(pSolver, beg, end );
+    Cnf_DataLift(pCnf, varNum);
+    Cnf_CnfForClause(pCnf, beg, end, _)
+      sat_solver_addclause(pSolver, beg, end );
+
+    // toLitCond(v, sign)
+    vector<int> alpha(piNum, 0); // varNum
+    vector<int> beta(piNum, 0);
+    for(int j=0; j<piNum; ++j)
+      alpha[j] = sat_solver_addvar(pSolver);
+    for(int j=0; j<piNum; ++j)
+      beta[j] = sat_solver_addvar(pSolver);
+
+    int alpha_start = 0, alpha_end = 0;
+    if(piNum){
+      alpha_start = alpha[0];
+      alpha_end = alpha[piNum-1];
+    }
+
+    // build (xi==xi' v a) ..., 
+    for(int j=0; j<piNum; ++j){
+      Aig_Obj_t* pCi = Aig_ManCi(pMan, j);
+      int xi = pID2Var[ Aig_ObjId(pCi) ];
+
+      lit cl[3]; 
+      //  alpha
+      cl[0] = toLitCond(xi, 1); cl[1] = toLitCond(xi+varNum, 0); cl[2] = toLitCond(alpha[j], 0);
+      sat_solver_addclause(pSolver, cl, cl+3);
+      cl[0] = toLitCond(xi, 0); cl[1] = toLitCond(xi+varNum, 1);
+      sat_solver_addclause(pSolver, cl, cl+3);
+
+      // beta
+      cl[0] = toLitCond(xi, 1); cl[1] = toLitCond(xi+2*varNum, 0); cl[2] = toLitCond(beta[j], 0);
+      sat_solver_addclause(pSolver, cl, cl+3);
+      cl[0] = toLitCond(xi, 0); cl[1] = toLitCond(xi+2*varNum, 1);
+      sat_solver_addclause(pSolver, cl, cl+3);
+    }
+
+
+    // assert f(x) !f(x') !f(x'')
+
+    lit tmp[1] = { lit(toLitCond( pID2Var[ Aig_ObjId(pPO) ], 0)) } ;
+    sat_solver_addclause(pSolver, tmp, tmp+1);
+    tmp[0] = toLitCond( pID2Var[Aig_ObjId(pPO)]+varNum, 1);
+    sat_solver_addclause(pSolver, tmp, tmp+1);
+    tmp[0] = toLitCond( pID2Var[Aig_ObjId(pPO)]+2*varNum, 1);
+    sat_solver_addclause(pSolver, tmp, tmp+1);
+
+  
+    lit* assump_list = new lit[piNum*2];
+    bool found = false;
+
+    for(int j=0; j<piNum; ++j){
+      assump_list[2*j] = toLitCond(alpha[j], 1);
+      assump_list[2*j+1] = toLitCond(beta[j], 1);
+    }
+
+    for(int j=0; j<piNum-1; ++j){
+      for(int k=j+1; k<piNum; ++k){
+
+        assump_list[2*j] = toLitCond(alpha[j], 0);
+        assump_list[2*k+1] = toLitCond(beta[k], 0);
+        //printf("seedA=%i, seedB=%i\n", j, k);
+        int status = sat_solver_solve( pSolver, assump_list, assump_list+piNum*2, 0, 0, 0, 0 );
+
+        if( status==l_False ){
+          int* conflict_cls;
+          int len = 0;
+          printf("1\n");
+          len = sat_solver_final(pSolver, &conflict_cls);
+
+          vector<int> partition(piNum, 3);
+          for(int l=0; l<len; ++l){
+            int var = lit_var(conflict_cls[l]);
+            assert( lit_sign(conflict_cls[l])==0 );
+            int k = (var-alpha_start) % piNum ; // kth pi
+            bool isBeta =  var > alpha_end ;
+
+            partition[k] -= (isBeta ? 1 : 2);
+          }
+          for(int l=0; l<piNum; ++l){
+            if (partition[l]==3) partition[l] = 1;
+            printf("%i",  partition[l] );
+          }
+          printf("\n");
+          found = true;
+          break;
+        }
+        // restore to partition C
+        assump_list[2*j] = toLitCond(alpha[j], 1);
+        assump_list[2*k+1] = toLitCond(beta[k], 1);
+      }
+      if(found) break;
+    }
+    delete [] assump_list;
+    if(!found) printf("0\n");
+
+  }
+}
+
+
+
+
+
+/***********************************/
+/************ PA2 end **************/
+/***********************************/
 
 int Lsv_CommandPrintMSFC(Abc_Frame_t* pAbc, int argc, char** argv) {
   Abc_Ntk_t* pNtk = Abc_FrameReadNtk(pAbc);
@@ -181,6 +338,33 @@ int Lsv_CommandPrintMSFC(Abc_Frame_t* pAbc, int argc, char** argv) {
 usage:
   Abc_Print(-2, "usage: lsv_print_msfc [-h]\n");
   Abc_Print(-2, "\t        prints the sorted MSFC group in the aig\n");
+  Abc_Print(-2, "\t-h    : print the command usage\n");
+  return 1;
+}
+
+int Lsv_CommandOrBiDec(Abc_Frame_t* pAbc, int argc, char** argv) {
+  Abc_Ntk_t* pNtk = Abc_FrameReadNtk(pAbc);
+  assert(  Abc_NtkIsStrash( pNtk ) );
+  int c;
+  Extra_UtilGetoptReset();
+  while ((c = Extra_UtilGetopt(argc, argv, "h")) != EOF) {
+    switch (c) {
+      case 'h':
+        goto usage;
+      default:
+        goto usage;
+    }
+  }
+  if (!pNtk) {
+    Abc_Print(-1, "Empty network.\n");
+    return 1;
+  }
+  Lsv_NtkPrintOrBiDec(pNtk);
+  return 0;
+
+usage:
+  Abc_Print(-2, "usage: lsv_or_bidec [-h]\n");
+  Abc_Print(-2, "\t        print the valid variable partition for each PO\n");
   Abc_Print(-2, "\t-h    : print the command usage\n");
   return 1;
 }
