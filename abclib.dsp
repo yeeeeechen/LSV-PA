@@ -1643,7 +1643,7 @@ SOURCE=.\src\bdd\cudd\cuddReorder.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\src\bdd\cudd\cuddSat.c
+SOURCE=.\src\bdd\cudd\cud.c
 # End Source File
 # Begin Source File
 
