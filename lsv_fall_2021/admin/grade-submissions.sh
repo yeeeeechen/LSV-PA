@@ -55,7 +55,7 @@ grade_one_branch () {
             echo "${bench},Fail" >> "${result}"
         fi 
     done
-    local __return_var="$2"
+    local __return_var="$2" 
     local __point=$(echo "${correct}*11+1" | bc)
     eval "${__return_var}"="${__point}"
     echo "[INFO] Correct cases: ${correct}"
