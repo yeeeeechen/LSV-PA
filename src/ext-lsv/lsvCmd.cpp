@@ -13,18 +13,17 @@
 #include <typeinfo>
 
 using namespace std;
-extern "C" {
-  extern Aig_Man_t * Abc_NtkToDar(Abc_Ntk_t * pNtk,int fExors,int fRegisters);
+extern "C"  Aig_Man_t * Abc_NtkToDar(Abc_Ntk_t * pNtk,int fExors,int fRegisters);
   
-}
+
 static int Lsv_CommandPrintNodes(Abc_Frame_t* pAbc, int argc, char** argv);
 
-static int lsv_or_bidec(Abc_Frame_t* pAbc, int argc, char** argv);
+static int Lsv_CommandA(Abc_Frame_t* pAbc, int argc, char** argv);
 
 void init(Abc_Frame_t* pAbc) {
   Cmd_CommandAdd(pAbc, "LSV", "lsv_print_nodes", Lsv_CommandPrintNodes, 0);
   
-  Cmd_CommandAdd(pAbc, "LSV", "lsv_or_bidec", lsv_or_bidec, 0);
+  Cmd_CommandAdd(pAbc, "LSV", "lsv_or_bidec", Lsv_CommandA, 0);
 
 }
 
@@ -88,7 +87,7 @@ bool cmp1(std::pair<int,int>a,std::pair<int,int>b)
 }
 
 
-int lsv_or_bidec(Abc_Frame_t* pAbc, int argc, char** argv) {
+int Lsv_CommandA(Abc_Frame_t* pAbc, int argc, char** argv) {
     Abc_Ntk_t* pNtk = Abc_FrameReadNtk(pAbc);
     
     Abc_Obj_t* pObj;
@@ -105,8 +104,8 @@ int lsv_or_bidec(Abc_Frame_t* pAbc, int argc, char** argv) {
       pMan = Abc_NtkToDar(pNtkOn1,0,0);
       pCnf = Cnf_Derive( pMan, 1 );
       pSat = (sat_solver *)Cnf_DataWriteIntoSolver(pCnf,1,0);
-      int nInitVars = pCnf->nVars;//varshift
-      int nCi = Aig_ManCiNum(pMan);
+      const int nInitVars = pCnf->nVars;//varshift
+      const int nCi = Aig_ManCiNum(pMan);
       sat_solver_setnvars(pSat, 3*nInitVars+2*nCi);
 
 
@@ -121,57 +120,37 @@ int lsv_or_bidec(Abc_Frame_t* pAbc, int argc, char** argv) {
       
       
       
-      int Lits[3];
-      int temp;
+      lit Lits[3];
+     
       int PO_var_num = pCnf->pVarNums[Aig_ManCo(  pMan,0 )->Id];
       Lits[0] = toLitCond(PO_var_num,0);
-      sat_solver_addclause(pSat,Lits,Lits+1);
+      sat_solver_addclause(pSat,Lits,Lits+1);//FX
 
-      //Cnf_Dat_t * pCnf1 = Cnf_DataDup(pCnf);
-      Cnf_DataLift(pCnf,nInitVars);
-      for (int r = 0; r < pCnf->nClauses; r++ ){//changable
-        temp = sat_solver_addclause( pSat, pCnf->pClauses[r], pCnf->pClauses[r+1] );
-        if ( !temp ){
-          sat_solver_delete( pSat );
-          std::cout<<"addclause fail!"<<std::endl;
-          
-        }
-      }
-
-      int PO_var_num1 = pCnf->pVarNums[Aig_ManCo(  pMan,0 )->Id];
-      Lits[0] = toLitCond(PO_var_num1,1);
-      sat_solver_addclause(pSat,Lits,Lits+1);
-  
       
       Cnf_DataLift(pCnf,nInitVars);
-      for (int r = 0; r < pCnf->nClauses; r++ ){//changable
-        temp = sat_solver_addclause( pSat, pCnf->pClauses[r], pCnf->pClauses[r+1] );
-        if ( !temp ){
-          sat_solver_delete( pSat );
-          std::cout<<"addclause fail!"<<std::endl;
-          
-        }
-      }
-
+      for (int r = 0; r < pCnf->nClauses; r++ )
+      sat_solver_addclause( pSat, pCnf->pClauses[r], pCnf->pClauses[r+1] );//FX
+      int PO_var_num1 = pCnf->pVarNums[Aig_ManCo(  pMan,0 )->Id];
+      Lits[0] = toLitCond(PO_var_num1,1);
+      sat_solver_addclause(pSat,Lits,Lits+1);//FX'
+      Cnf_DataLift(pCnf,nInitVars);
+      for (int r = 0; r < pCnf->nClauses; r++ )
+      sat_solver_addclause( pSat, pCnf->pClauses[r], pCnf->pClauses[r+1] );//FX'
       int PO_var_num2 = pCnf->pVarNums[Aig_ManCo(  pMan,0 )->Id];
       Lits[0] = toLitCond(PO_var_num2,1);
-      sat_solver_addclause(pSat,Lits,Lits+1);
-
-
+      sat_solver_addclause(pSat,Lits,Lits+1);//FX''
       int alpha  = 3*(nInitVars)+1,
-          //let beta = alpha+1 
+          
           id1st, id2nd, id3rd;
 
-      //Aig_Obj_t* pAigCi;
-      Aig_ManForEachCi( pMan, pObj_Ci, j ){
+      
+      Aig_ManForEachCi( pMan, pObj_Ci, j ){//Ci
         id3rd = pCnf->pVarNums[pObj_Ci->Id];
         id2nd = id3rd - nInitVars;
         id1st = id2nd - nInitVars;
 
-        //X X' alpha
-        //Lsv_AddClauseForEq( pSat, id1st, id2nd, alpha++);
+        
         int Cid;
-        //assert( iVarA >= 0 && iVarB >= 0 && iVarEn >= 0 );
         lit Lits2 [4];
         Lits2[0] = toLitCond( id1st, 0 );
         Lits2[1] = toLitCond( id2nd, 1 );
@@ -185,8 +164,7 @@ int lsv_or_bidec(Abc_Frame_t* pAbc, int argc, char** argv) {
         Cid = sat_solver_addclause( pSat, Lits2, Lits2 + 3 );
         assert( Cid );
         alpha++;
-        //X X" beta
-        //Lsv_AddClauseForEq( pSat, id1st, id3rd, alpha++);  
+        
         Lits2[0] = toLitCond( id1st, 0 );
         Lits2[1] = toLitCond( id3rd, 1 );
         Lits2[2] = toLitCond( alpha, 0 );
@@ -225,7 +203,7 @@ int lsv_or_bidec(Abc_Frame_t* pAbc, int argc, char** argv) {
       //  z++;
       //}
 
-      int Lits1 [2*nCi];    
+      lit Lits1 [2*nCi];    
       for (int m = 0;m<2*nCi;++m){
         Lits1[m] = toLitCond( (3*nInitVars + m + 1), 1 );
       }
@@ -253,13 +231,12 @@ int lsv_or_bidec(Abc_Frame_t* pAbc, int argc, char** argv) {
       //std::vector<std::pair<int,int>> unit_assumption(varshift, std::make_pair(0, 0));//first = alpha ,second = beta;
       for (int k = 1;k < nCi;++k){
         for (int l = 0;l < k; ++l){
-          Lits1[ 2*k   ]--; //alphaj=1
-          Lits1[(2*l)+1]--; //betak=1
+          Lits1[ 2*k   ]--; 
+          Lits1[(2*l)+1]--; 
           
           status = sat_solver_solve(pSat,Lits1,Lits1+2*nCi,0,0,0,0);
-          Lits1[ 2*k   ]++; //alphaj=1
-          Lits1[(2*l)+1]++; //betak=1
-          //final_size = sat_solver_final(pSat,)
+          Lits1[ 2*k   ]++; 
+          Lits1[(2*l)+1]++; 
           if (status == l_False){
             break;
           }
@@ -272,45 +249,33 @@ int lsv_or_bidec(Abc_Frame_t* pAbc, int argc, char** argv) {
       }
 
       if(status==l_False){
-        //unsat -> print
+        
         std::cout<<"PO "<<Abc_ObjName(pObj)<<" support partition: 1"<<std::endl;
 
-        //now Lits is alpha,beta
-        //initialize to all 1
         for(j=0; j<2*nCi; ++j){ Lits1[j] = 1; }
 
-        int *pClauses, *pLit, *pStop;
+        int *pClauses, *vartolit, *end;
         int nFinalClause = sat_solver_final(pSat, &pClauses);
-        //std::cerr<<"nFinalClauses: "<<nFinalClause<<std::endl;
-        //assert at least two 1 in Lits
+        
         
 
-        for(j=0; j<nFinalClause; ++j){
-          for ( pLit = &pClauses[j], pStop = &pClauses[j+1]; pLit < pStop; pLit++ ){
-            Lits1[Abc_Lit2Var(*pLit)-(nInitVars*3)-1]=0;
-            //std::cout<<Abc_Lit2Var(*pLit)<<" ";
-          } //std::cout<<std::endl;
+        for(j=0; j<nFinalClause; j++){
+          for ( vartolit = &pClauses[j], end = &pClauses[j+1]; vartolit < end; vartolit++ ){
+            Lits1[Abc_Lit2Var(*vartolit)-(nInitVars*3)-1]=0;
+          } 
         }
 
-        //just try to make XA and XB balance
-        int nXA=0, nXB=0;
+        
         for(j=0; j<nCi; ++j){
-          if     (Lits1[(2*j)]==0 && Lits1[(2*j)+1]==1) std::cout<<"1"; //alpha=0, beta=1 => XB
-          else if(Lits1[(2*j)]==1 && Lits1[(2*j)+1]==0) std::cout<<"2"; //alpha=1, beta=0 => XA
-          else if(Lits1[(2*j)]==0 && Lits1[(2*j)+1]==0) std::cout<<"0"; //alpha=0, beta=0 => XC
-          else if(nXA>nXB){ std::cout<<"1"; ++nXB; } 
-          else            { std::cout<<"2"; ++nXA; }  
+          if     (Lits1[(2*j)]==0 && Lits1[(2*j)+1]==1) std::cout<<"1"; 
+          else if(Lits1[(2*j)]==1 && Lits1[(2*j)+1]==0) std::cout<<"2"; 
+          else  std::cout<<"0"; 
         }
         std::cout<<std::endl;
       }
       else{
-        //sat -> print
-        //std::cout<<status;
-        assert(status==l_True|| nCi<=1);
         std::cout<<"PO "<<Abc_ObjName(pObj)<<" support partition: 0"<<std::endl;
       }
-      
-
     }
     
     return 0;
