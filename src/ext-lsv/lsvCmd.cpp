@@ -23,6 +23,8 @@ void destroy(Abc_Frame_t* pAbc) {}
 
 Abc_FrameInitializer_t frame_initializer = {init, destroy};
 
+// ---------- lsv_print_msfc ----------
+
 struct PackageRegistrationManager {
   PackageRegistrationManager() { Abc_FrameAddInitializer(&frame_initializer); }
 } lsvPackageRegistrationManager;
@@ -316,6 +318,7 @@ usage:
 }
 
 // ---------- lsv_print_msfc ----------
+
 
 bool compareByID (Abc_Obj_t* Obj1, Abc_Obj_t* Obj2){
   return (Abc_ObjId(Obj1) < Abc_ObjId(Obj2) );
