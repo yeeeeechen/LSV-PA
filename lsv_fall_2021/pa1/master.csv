@@ -1,5 +1,5 @@
 Benchmark,Result
-lsv_fall_2021/pa1/sa4.blif,Pass
+lsv_fall_2021/pa1/sfa_4num.blif,Fail
 benchmarks/arithmetic//hyp.aig,Pass
 benchmarks/arithmetic//multiplier.aig,Pass
 benchmarks/arithmetic//log2.aig,Pass
@@ -20,4 +20,4 @@ benchmarks/random_control//voter.aig,Pass
 benchmarks/random_control//router.aig,Pass
 benchmarks/random_control//i2c.aig,Pass
 benchmarks/random_control//arbiter.aig,Pass
-Score,85
+Score,80
