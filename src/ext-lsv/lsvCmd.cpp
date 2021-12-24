@@ -6,15 +6,20 @@
 #include "base/abc/abc.h"
 #include "base/main/main.h"
 #include "base/main/mainInt.h"
+#include "sat/cnf/cnf.h"
+
+extern "C" Aig_Man_t * Abc_NtkToDar(Abc_Ntk_t *, int fExors, int fRegisters);
+extern "C" Cnf_Dat_t * Cnf_Derive(Aig_Man_t *, int nOutputs);
 
 using namespace std;
 
 static int Lsv_CommandPrintNodes(Abc_Frame_t* pAbc, int argc, char** argv);
 static int LSV_CommandPrintMSFC(Abc_Frame_t* pAbc, int argc, char** argv);
+static int LSV_CommandBIDEC(Abc_Frame_t* pAbc, int argc, char** argv);
 
 void init(Abc_Frame_t* pAbc) {
   Cmd_CommandAdd(pAbc, "LSV", "lsv_print_nodes", Lsv_CommandPrintNodes, 0);
-  Cmd_CommandAdd(pAbc, "LSV", "lsv_print_msfc", LSV_CommandPrintMSFC, 0);
+  Cmd_CommandAdd(pAbc, "LSV", "lsv_or_bidec", LSV_CommandBIDEC, 0);
 }
 
 void destroy(Abc_Frame_t* pAbc) {}
@@ -68,216 +73,274 @@ usage:
   return 1;
 }
 
-bool compareV(Abc_Obj_t* a, Abc_Obj_t* b)
+void BIDEC(Abc_Ntk_t* pNtk)
 {
-  return Abc_ObjId(a) < Abc_ObjId(b);
-}
-
-bool compareVV(vector<Abc_Obj_t*>& a, vector<Abc_Obj_t*>& b)
-{
-  return Abc_ObjId(a[0]) < Abc_ObjId(b[0]);
-}
-
-unordered_map<string, int> const_exist;
-
-void TRAVERSE(Abc_Ntk_t* pNtk, Abc_Obj_t* pNode, vector<Abc_Obj_t*>& cone, bool rt, vector<Abc_Obj_t*>& cst)
-// void TRAVERSE(Abc_Ntk_t* pNtk, Abc_Obj_t* pNode, vector<Abc_Obj_t*>& cone, bool rt)
-{
-    if (pNode -> fMarkA == 1) {return;}
-    
-    // base case
-    else if (Abc_ObjIsCi(pNode))
+    Abc_Obj_t* Po;
+    int i;
+    Abc_NtkForEachCo(pNtk, Po, i)
     {
-        pNode -> fMarkA = 1;
-        pNode -> fMarkB = 0;
-        return;
+        Abc_Ntk_t * pCone;
+        Aig_Man_t * pAig;
+        Cnf_Dat_t * pCnf;
+        sat_solver * pSat;
         
-    }
-    
-    // constant
-    else if (Abc_ObjType(pNode)==1)
-    {
-        if (Abc_ObjFanoutNum(pNode) > 1)
+        //bool SAT;
+        //SAT = true;
+        //int name;
+        //name = Po -> Id;
+        //name = 1;
+        
+        //printf("start \n");
+
+        pCone = Abc_NtkCreateCone( pNtk, Abc_ObjFanin0(Po), Abc_ObjName(Po), 0 );
+        if ( Abc_ObjFaninC0(Po) )
+            Abc_ObjXorFaninC( Abc_NtkPo(pCone, 0), 0 );
+
+        //printf("cone \n");
+        
+        pCone = Abc_NtkStrash( pCone, 0, 1, 0 );
+        pAig = Abc_NtkToDar(pCone,0,1);
+        //printf("AIG \n");
+        
+        pCnf = Cnf_Derive(pAig, 1);
+        //printf("CNF \n");
+        
+        pSat = (sat_solver*) Cnf_DataWriteIntoSolver(pCnf, 1, 0);
+        //printf("SAT \n");
+        
+        //printf("structure finish \n");
+        
+        Aig_Obj_t* Aobj;
+        int shift;
+        shift = 0;
+        vector<int> variables;
+        int vnum; // variable number
+        int o_tag; // output tag
+        int j; // iterator
+        
+        // data for sat
+        Aig_ManForEachObj(pAig, Aobj, j)
         {
-            cst.push_back(pNode);
-            return;
+            vnum = pCnf->pVarNums[Aobj->Id];
+            if (vnum > shift)
+            {
+                shift = vnum;
+            }
+            if (Aig_ObjType(Aobj) == AIG_OBJ_CI)
+            {
+                variables.push_back(Aobj -> Id);
+            }
+            if (Aig_ObjType(Aobj) == AIG_OBJ_CO)
+            {
+                o_tag = Aobj -> Id;
+            }
+        }
+        
+        // CNF output clause
+        int IPsize = variables.size();
+        int f_p = pCnf -> pVarNums[o_tag];
+        int f_lit = Abc_Var2Lit(f_p, 0);
+        int *f = &f_lit;
+        sat_solver_addclause(pSat, f, f+1);
+        
+        // input
+        vector<int> IP_list, IP_prime_list, IP_prime2_list;
+        for (int k = 0 ; k < IPsize ; ++k)
+        {
+            IP_list.push_back(pCnf->pVarNums[variables[k]]);
+            IP_prime_list.push_back(pCnf->pVarNums[variables[k]] + shift);
+            IP_prime2_list.push_back(pCnf->pVarNums[variables[k]] + 2*shift);
+        }
+        
+        // first negation
+        Cnf_DataLift(pCnf, shift);
+        int f_prime_lit = Abc_Var2Lit(f_p + shift, 1);
+        int *f_prime = &f_prime_lit;
+        sat_solver_addclause(pSat, f_prime, f_prime+1);
+        for (int l = 0; l < pCnf -> nClauses; ++l)
+        {
+            sat_solver_addclause(pSat, pCnf -> pClauses[l], pCnf -> pClauses[l+1]);
+        }
+        
+        // second negation
+        Cnf_DataLift(pCnf, shift);
+        int f_prime2_lit = Abc_Var2Lit(f_p + 2*shift, 1);
+        int *f_prime2 = &f_prime2_lit;
+        sat_solver_addclause(pSat, f_prime2, f_prime2+1);
+        for (int m = 0; m < pCnf -> nClauses; ++m)
+        {
+            sat_solver_addclause(pSat, pCnf -> pClauses[m], pCnf -> pClauses[m+1]);
+        }
+        
+        //printf("%d \n", IPsize);
+        
+        // sat size update
+        
+        for (int n = 0; n < 2*IPsize; ++n)
+        {
+            sat_solver_addvar(pSat);
+        }
+        
+        // test
+        //for (int i = 0 ; i < IPsize ; ++i) { sat_solver_addvar(pSat); }
+        //for (int i = 0 ; i < IPsize ; ++i) { sat_solver_addvar(pSat); }
+        
+        // controller
+        vector<int> a, b;
+        int a_start, a_end;
+        int b_start, b_end;
+        a_start = 3*shift + 1;
+        a_end = a_start + IPsize - 1;
+        b_start = a_end + 1;
+        b_end = b_start + IPsize - 1;
+        
+        // test
+        //for (int i = a_start ; i < a_end + 1 ; ++i) { a.push_back(i); }
+        //for (int i = b_start ; i < b_end + 1 ; ++i) { b.push_back(i); }
+        
+        for (int p = a_start; p < a_end + 1; ++p)
+        {
+            a.push_back(p);
+            b.push_back(p+IPsize);
+        }
+        
+        
+        // control clauses
+        for (int q = 0; q < IPsize ; ++q)
+        {
+            int control_a1[3] = {Abc_Var2Lit(IP_list[q], 0), Abc_Var2Lit(IP_prime_list[q], 1), Abc_Var2Lit(a[q], 0)};
+            sat_solver_addclause(pSat, control_a1, control_a1+3);
+            
+            int control_a2[3] = {Abc_Var2Lit(IP_list[q], 1), Abc_Var2Lit(IP_prime_list[q], 0), Abc_Var2Lit(a[q], 0)};
+            sat_solver_addclause(pSat, control_a2, control_a2+3);
+            
+            int control_b1[3] = {Abc_Var2Lit(IP_list[q], 0), Abc_Var2Lit(IP_prime2_list[q], 1), Abc_Var2Lit(b[q], 0)};
+            sat_solver_addclause(pSat, control_b1, control_b1+3);
+            
+            int control_b2[3] = {Abc_Var2Lit(IP_list[q], 1), Abc_Var2Lit(IP_prime2_list[q], 0), Abc_Var2Lit(b[q], 0)};
+            sat_solver_addclause(pSat, control_b2, control_b2+3);
+            
+        }
+        
+        // sat solving
+        int partition;
+        partition = 0;
+        if (IPsize > 1)
+        {
+            for (int r = 0; r < IPsize - 1; ++r)
+            {
+                for (int s = r+1; s < IPsize; ++s)
+                {
+                    vector<int> assumption;
+                    for (int t = 0; t < IPsize; ++t)
+                    {
+                        if (t == r)
+                        {
+                            assumption.push_back(2*a[t]+1);
+                            assumption.push_back(2*b[t]);
+                        }
+                        
+                        else if (t == s)
+                        {
+                            assumption.push_back(2*a[t]);
+                            assumption.push_back(2*b[t]+1);
+                        }
+                        
+                        else
+                        {
+                            assumption.push_back(2*a[t]+1);
+                            assumption.push_back(2*b[t]+1);
+                        }
+                        
+                    }
+                    
+                    // solving
+                    int result;
+                    result = sat_solver_solve(pSat, &assumption[0], &assumption[assumption.size()], 0, 0, 0, 0);
+                    
+                    int nCoreLits, * pCoreLits;
+                    vector<int> ans_candidate, ans;
+                    if (result == l_False)
+                    {
+                        partition = 1;
+                        nCoreLits = sat_solver_final(pSat, &pCoreLits);
+                        
+                        // finding relevant variables
+                        for (int k = 0 ; k < nCoreLits ; ++k)
+                        {
+                            if ((std::find(a.begin(), a.end(), int(pCoreLits[k]/2)) != a.end()) || (std::find(b.begin(), b.end(), int(pCoreLits[k]/2)) != b.end()))
+                            {
+                                ans_candidate.push_back(int(pCoreLits[k]/2));
+                            }
+                        }
+                        
+                        // output classification
+                        //printf("%d %d \n", r, s);
+                        for (int k = 0 ; k < IPsize ; ++k)
+                        {
+                            if (k == r)
+                            {
+                                ans.push_back(1);
+                                continue;
+                            }
+                            if (k == s)
+                            {
+                                ans.push_back(2);
+                                continue;
+                            }
+                            if ((std::find(ans_candidate.begin(), ans_candidate.end(), a[k]) != ans_candidate.end()) && (std::find(ans_candidate.begin(), ans_candidate.end(), b[k]) != ans_candidate.end()))
+                            {
+                                ans.push_back(0);
+                                continue;
+                            }
+                            else if ((std::find(ans_candidate.begin(), ans_candidate.end(), a[k]) != ans_candidate.end()) && (std::find(ans_candidate.begin(), ans_candidate.end(), b[k]) == ans_candidate.end()))
+                            {
+                                ans.push_back(1);
+                                continue;
+                            }
+                            else if ((std::find(ans_candidate.begin(), ans_candidate.end(), a[k]) == ans_candidate.end()) && (std::find(ans_candidate.begin(), ans_candidate.end(), b[k]) != ans_candidate.end()))
+                            {
+                                ans.push_back(2);
+                                continue;
+                            }
+                            else if ((std::find(ans_candidate.begin(), ans_candidate.end(), a[k]) == ans_candidate.end()) && (std::find(ans_candidate.begin(), ans_candidate.end(), b[k]) == ans_candidate.end()))
+                            {
+                                ans.push_back(1);
+                                continue;
+                            }
+                        }
+                    }
+                    if (partition == 1)
+                    {
+                        printf("PO %s support partition: 1 \n", Abc_ObjName(Po));
+                        for (int k = 0 ; k < ans.size() ; ++k)
+                        {
+                            printf("%d", ans[k]);
+                        }
+                        printf("\n");
+                        break;
+                    }
+                }
+                if (partition == 1)
+                {
+                    break;
+                }
+            }
+            if (partition == 0)
+            {
+                printf("PO %s support partition: 0 \n", Abc_ObjName(Po));
+            }
         }
         else
         {
-            cone.push_back(pNode);
+            printf("PO %s support partition: 0 \n", Abc_ObjName(Po));
         }
-        return;
-    }
-    
-    // new fanout cone
-    else if ((Abc_ObjFanoutNum(pNode) > 1)&&(!rt))
-    {
-        pNode -> fMarkB = 1;
-        return;
-    }
-    
-    // travel
-    else
-    {
-        pNode->fMarkA = 1;
-        cone.push_back(pNode);
-    }
-
-    pNode -> fMarkB = 0;
-    Abc_Obj_t* pFanin;
-    int i;
-    // recursively traverse each fanin
-    Abc_ObjForEachFanin(pNode, pFanin, i) { TRAVERSE(pNtk, pFanin, cone, false, cst); }
-    // Abc_ObjForEachFanin(pNode, pFanin, i) { TRAVERSE(pNtk, pFanin, cone, false); }
-}
-
-void MSFC(Abc_Ntk_t* pNtk)
-{
-    int i_1;
-    bool done;
-    done = false;
-    Abc_Obj_t* P_init;
-    Abc_Obj_t* Po;
-    vector<vector<Abc_Obj_t*> > cones;
-    bool exist;
-    
-    // printf("get started \n");
-    // initialization
-    Abc_NtkForEachNode(pNtk, P_init, i_1)
-    {
-        P_init -> fMarkA = 0;
-        P_init -> fMarkB = 0;
-    }
-    // printf("finish initialization \n");
-    
-    int i_2;
-    // primary output
-    Abc_NtkForEachPo(pNtk, Po, i_2)
-    {
-        int j_1;
-        Po -> fMarkA = 1;
-        Abc_Obj_t* pFanin;
-        Abc_ObjForEachFanin(Po, pFanin, j_1)
-        {
-            //printf("PI \n");
-            vector<Abc_Obj_t*> cone;
-            vector<Abc_Obj_t*> cst;
-            TRAVERSE(pNtk, pFanin, cone, true, cst);
-            // TRAVERSE(pNtk, pFanin, cone, true);
-            if (!(cone.empty()))
-            {
-                sort(cone.begin(), cone.end(), compareV);
-                cones.push_back(cone);
-            }
-            
-            
-            if ((!cst.empty())&&(!done))
-            {
-                cones.push_back(cst);
-                done = true;
-            }
-            
-        }
-    }
-    // printf("finish primary out \n");
-
-    // test variables
-    // int t;
-    // t = 1;
-    
-    // printf("finish index intialization \n");
-    
-    do
-    {
-        // printf("iteration %d \n", t);
-        
-        // execute
-        Abc_Obj_t* P_ite;
-        int j_3;
-        Abc_NtkForEachNode(pNtk, P_ite, j_3)
-        {
-            if (P_ite -> fMarkB == 1)
-            {
-                vector<Abc_Obj_t*> CONE;
-                vector<Abc_Obj_t*> CST;
-                TRAVERSE(pNtk, P_ite, CONE, true, CST);
-                // TRAVERSE(pNtk, P_ite, CONE, true);
-                if (!(CONE.empty()))
-                {
-                    sort(CONE.begin(), CONE.end(), compareV);
-                    cones.push_back(CONE);
-                }
-                
-                
-                if ((!CST.empty())&&(!done))
-                {
-                    cones.push_back(CST);
-                    done = true;
-                }
-                
-            }
-        }
-        
-        // printf("augumentation %d \n", t);
-        
-        // check if empty
-        exist = false;
-        Abc_Obj_t* P_check;
-        int j_2;
-        Abc_NtkForEachNode(pNtk, P_check, j_2)
-        {
-            if (P_check -> fMarkB == 1)
-            {
-                exist = true;
-                break;
-            }
-        }
-        
-        // printf("empty check %d \n", t);
-        // t = t+1;
-        
-    }while(exist);
-    
-    // printf("finish traversal \n");
-    sort(cones.begin(), cones.end(), compareVV);
-    // printf("end sorting");
-    
-    int count_ans = 0;
-    for (int k = 0 ; k < cones.size() ; ++k)
-    {
-      printf("MSFC %d: ", count_ans);
-      for (int l = 0 ; l < cones[k].size() ; ++l)
-      {
-        printf("%s", Abc_ObjName(cones[k][l]));
-        if (l == cones[k].size()-1) { printf("\n"); }
-        else { printf(","); }
-      }
-      ++count_ans;
-    }
-
-    int i_3;
-    Abc_NtkForEachNode(pNtk, P_init, i_3)
-    {
-        P_init -> fMarkA = 0;
-        P_init -> fMarkB = 0;
-    }
-    
-    int i_4;
-    Abc_NtkForEachPo(pNtk, P_init, i_4)
-    {
-        P_init -> fMarkA = 0;
-        P_init -> fMarkB = 0;
-    }
-    
-    int i_5;
-    Abc_NtkForEachPi(pNtk, P_init, i_5)
-    {
-        P_init -> fMarkA = 0;
-        P_init -> fMarkB = 0;
     }
 }
 
-int LSV_CommandPrintMSFC(Abc_Frame_t* pAbc, int argc, char** argv)
+
+
+int LSV_CommandBIDEC(Abc_Frame_t* pAbc, int argc, char** argv)
 {
   Abc_Ntk_t* pNtk = Abc_FrameReadNtk(pAbc);
   int c;
@@ -298,12 +361,12 @@ int LSV_CommandPrintMSFC(Abc_Frame_t* pAbc, int argc, char** argv)
     return -1;
   }
   // main function
-  MSFC(pNtk);
+  BIDEC(pNtk);
   return 0;
 
 usage:
-  Abc_Print(-2, "usage: lsv_print_msfc [-h]\n");
-  Abc_Print(-2, "\t        prints the msfc in the network\n");
+  Abc_Print(-2, "usage: lsv_or_bidec [-h]\n");
+  Abc_Print(-2, "\t        prints the BIDEC in the network\n");
   Abc_Print(-2, "\t-h    : print the command usage\n");
   return 1;
 
