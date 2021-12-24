@@ -75,6 +75,7 @@ usage:
   return 1;
 }
 //----------------------------------------------LSV PA1---------------------------------------------//
+
 void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk) {
   Abc_Obj_t* pObj;
   int i;
