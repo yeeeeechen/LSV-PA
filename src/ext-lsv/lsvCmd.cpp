@@ -1,17 +1,32 @@
 #include "base/abc/abc.h"
 #include "base/main/main.h"
 #include "base/main/mainInt.h"
+#include "sat/cnf/cnf.h"
+#include "sat/bsat/satSolver.h"
+#include "aig/aig/aig.h"
+
 #include <vector>
 #include <algorithm>
 #include <cassert>
 #define DEBUG 0
 
+enum Set{
+  XC,
+  XB,
+  XA,
+  XAB
+};
+
+extern "C" Aig_Man_t *  Abc_NtkToDar( Abc_Ntk_t * pNtk, int fExors, int fRegisters );
+
 static int Lsv_CommandPrintNodes(Abc_Frame_t* pAbc, int argc, char** argv);
 static int Lsv_CommandPrintMSFC(Abc_Frame_t* pAbc, int argc, char** argv);
+static int Lsv_CommandOrBidec(Abc_Frame_t* pAbc, int argc, char** argv);
 
 void init(Abc_Frame_t* pAbc) {
   Cmd_CommandAdd(pAbc, "LSV", "lsv_print_nodes", Lsv_CommandPrintNodes, 0);
   Cmd_CommandAdd(pAbc, "LSV", "lsv_print_msfc", Lsv_CommandPrintMSFC, 0);
+  Cmd_CommandAdd(pAbc, "LSV", "lsv_or_bidec", Lsv_CommandOrBidec, 0);
 }
 
 void destroy(Abc_Frame_t* pAbc) {}
@@ -198,6 +213,257 @@ int Lsv_CommandPrintMSFC(Abc_Frame_t* pAbc, int argc, char** argv) {
 usage:
   Abc_Print(-2, "usage: lsv_print_msfc [-h]\n");
   Abc_Print(-2, "\t        prints the MSFC in the network\n");
+  Abc_Print(-2, "\t-h    : print the command usage\n");
+  return 1;
+  
+}
+
+int my_sat_solver_add_buffer_enable( sat_solver * pSat, int iVarA, int iVarB, int iVarEn, int fCompl )
+{
+    lit Lits[3];
+    int Cid;
+    assert( iVarA >= 0 && iVarB >= 0 && iVarEn >= 0 );
+
+    Lits[0] = toLitCond( iVarA, 0 );
+    Lits[1] = toLitCond( iVarB, !fCompl );
+    Lits[2] = toLitCond( iVarEn, 0 );
+    Cid = sat_solver_addclause( pSat, Lits, Lits + 3 );
+    assert( Cid );
+
+    Lits[0] = toLitCond( iVarA, 1 );
+    Lits[1] = toLitCond( iVarB, fCompl );
+    Lits[2] = toLitCond( iVarEn, 0 );
+    Cid = sat_solver_addclause( pSat, Lits, Lits + 3 );
+    assert( Cid );
+    return 2;
+}
+
+int Lsv_NtkOrBidec(Abc_Ntk_t* pNtk){
+
+  Abc_Obj_t* pPo = NULL;
+  int iPo = -1;
+  Abc_NtkForEachPo(pNtk, pPo, iPo){
+    Abc_Ntk_t* pSubNtk = Abc_NtkCreateCone(pNtk, Abc_ObjFanin0(pPo), Abc_ObjName(pPo), 0);
+    if ( Abc_ObjFaninC0(pPo) )
+      Abc_ObjXorFaninC( Abc_NtkPo(pSubNtk, 0), 0 );
+
+    Aig_Man_t* pAig = Abc_NtkToDar(pSubNtk, 0, 0);
+
+    Cnf_Dat_t* pCnf = Cnf_Derive(pAig, 1);
+
+    Aig_Obj_t* pObj = NULL;
+    int iObj = -1;
+
+    if(DEBUG){
+      // Print the mapping between Aig Obj id and its variable
+      printf("----Variable mapping----\n");
+      printf("#Variables: %d \n", pCnf->nVars);
+      Aig_ManForEachCi(pAig, pObj, iObj){
+        printf("CI id:%d Variable:%d\n", Aig_ObjId(pObj), pCnf->pVarNums[Aig_ObjId(pObj)]);
+      }
+      
+      Aig_ManForEachCo(pAig, pObj, iObj){
+        printf("Output id:%d Varaible:%d\n", Aig_ObjId(pObj), pCnf->pVarNums[Aig_ObjId(pObj)]);
+      }
+
+      // Print Cnf
+      printf("----CNF----\n");
+      printf("#Clauses: %d \n", pCnf->nClauses);
+      
+      for(int i = 0; i < pCnf->nClauses; ++i){
+        for(int* pLit = pCnf->pClauses[i]; pLit !=  pCnf->pClauses[i+1]; pLit++){
+          printf("%s%d ", Abc_LitIsCompl(*pLit) ? "-":"", Abc_Lit2Var(*pLit) );
+        }
+        printf("\n");
+      }
+    }
+
+    // initialize sat solver
+    sat_solver* solver = sat_solver_new();
+    if(DEBUG){
+      solver->fPrintClause = 1;
+      printf("----Added Clauses----\n");
+    }
+    sat_solver_setnvars(solver, 3*pCnf->nVars);
+
+    // write circuit X cnf into solver
+    for(int i = 0; i < pCnf->nClauses; ++i)
+      sat_solver_addclause(solver, pCnf->pClauses[i], pCnf->pClauses[i+1]);
+
+    // write circuit X' cnf into solver
+    Cnf_DataLift(pCnf, pCnf->nVars);
+    for(int i = 0; i < pCnf->nClauses; ++i)
+      sat_solver_addclause(solver, pCnf->pClauses[i], pCnf->pClauses[i+1]);
+
+    // write circuit X'' cnf into solver
+    Cnf_DataLift(pCnf, pCnf->nVars);
+    for(int i = 0; i < pCnf->nClauses; ++i)
+      sat_solver_addclause(solver, pCnf->pClauses[i], pCnf->pClauses[i+1]);
+
+    Cnf_DataLift(pCnf, (-2) * pCnf->nVars);
+
+    // f(X), not f(X'), not f(X'')   
+    assert(Aig_ManCoNum(pAig) == 1);
+
+    Aig_ManForEachCo(pAig , pObj, iObj ){
+      int var = pCnf->pVarNums[Aig_ObjId(pObj)];
+      lit lits[1];
+      lits[0] = var*2;
+      sat_solver_addclause(solver, lits, lits+1);
+      lits[0] = (var + pCnf->nVars) * 2 + 1;
+      sat_solver_addclause(solver, lits, lits+1);
+      lits[0] = (var + 2 * pCnf->nVars) * 2 + 1;
+      sat_solver_addclause(solver, lits, lits+1);
+    }
+
+    // add control variables
+    std::vector<int> ctrAVars;
+    std::vector<int> ctrBVars;
+    for(int i = 0; i < Aig_ManCiNum(pAig); i++){
+      ctrAVars.push_back(sat_solver_addvar(solver));
+    }
+    for(int i = 0; i < Aig_ManCiNum(pAig); i++){
+      ctrBVars.push_back(sat_solver_addvar(solver));
+    }
+    
+    for(int i = 0; i < Aig_ManCiNum(pAig); i++){
+      int var = pCnf->pVarNums[Aig_ObjId(Aig_ManCi(pAig, i))];
+      my_sat_solver_add_buffer_enable(solver, var, var + pCnf->nVars, ctrAVars[i], 0);
+      my_sat_solver_add_buffer_enable(solver, var, var + 2 * pCnf->nVars, ctrBVars[i], 0);
+    }
+
+    std::vector<enum Set> bestParti;
+    int bestXC = INT_MAX;
+
+    // enumerate partition seed
+    for(int ctrA = 0; ctrA < Aig_ManCiNum(pAig) -1; ctrA++){
+      for(int ctrB = ctrA+1 ; ctrB < Aig_ManCiNum(pAig); ctrB++){
+        // unit assumption
+        lit assump[2*Aig_ManCiNum(pAig)];
+        for(int i = 0; i < Aig_ManCiNum(pAig); i++){
+          assump[2*i] = (i == ctrA)? 2*ctrAVars[i] : 2*ctrAVars[i]+1;
+          assump[2*i+1] = (i == ctrB)? 2*ctrBVars[i] : 2*ctrBVars[i]+1;
+        }
+      
+        // solve
+        int result = sat_solver_solve(solver, assump, assump + 2*Aig_ManCiNum(pAig), 0, 0, 0, 0);
+        if(result == 1) continue;
+        else if(result != -1) assert(0);
+        
+        // find partition
+        int* conf_cls = NULL;
+        int conf_cls_num = sat_solver_final(solver, &conf_cls);
+
+        //********* TODO: minimize conflict clause *********
+
+
+        bool partition[2][Aig_ManCiNum(pAig)];
+        for(int i = 0; i < Aig_ManCiNum(pAig); i++){
+          partition[0][i] = partition[1][i] = 1;
+        }
+        for(int i = 0; i < conf_cls_num; i++){
+          int var = conf_cls[i]/2 - 3*pCnf->nVars;
+          if(var >= Aig_ManCiNum(pAig)) partition[1][var-Aig_ManCiNum(pAig)] = 0;
+          else partition[0][var] = 0;
+        }
+        
+        std::vector<enum Set> vParti;
+        int numXA = 0, numXB = 0, numXC = 0, numXAB = 0;
+        for(int i = 0; i < Aig_ManCiNum(pAig); i++){
+          if(partition[0][i] == 0 && partition[1][i] == 0){
+            vParti.push_back(XC);
+            numXC++;
+          }
+          else if(partition[0][i] == 1 && partition[1][i] == 0){
+            vParti.push_back(XA);
+            numXA++;
+          }
+          else if(partition[0][i] == 0 && partition[1][i] == 1){
+            vParti.push_back(XB);
+            numXB++;
+          }
+          else{
+            vParti.push_back(XAB);
+            numXAB++;
+          }
+        }
+
+        if(DEBUG){
+          printf("----Partition----\n");
+          for(int i = 0; i < Aig_ManCiNum(pAig); i++){
+            if(vParti[i] == XC) printf("%d: XC\n", i);
+            else if(vParti[i] == XA) printf("%d: XA\n", i);
+            else if(vParti[i] == XB) printf("%d: XB\n", i);
+            else printf("%d: XAB\n", i);
+          }
+        }
+
+        // update best partition
+        // if find minimal, break
+        if(numXC == bestXC){
+          ctrA = Aig_ManCiNum(pAig);
+          ctrB = Aig_ManCiNum(pAig);
+        }
+        else if(numXC < bestXC){
+          bestXC = numXC;
+          bestParti = vParti;
+          if(bestXC == 0){
+            ctrA = Aig_ManCiNum(pAig);
+            ctrB = Aig_ManCiNum(pAig);
+          }
+        }
+      }
+    }
+
+    if(DEBUG){
+      printf("----Best Partition----\n");
+          for(int i = 0; i < Aig_ManCiNum(pAig); i++){
+            if(bestParti[i] == XC) printf("%d: XC\n", i);
+            else if(bestParti[i] == XA) printf("%d: XA\n", i);
+            else if(bestParti[i] == XB) printf("%d: XB\n", i);
+            else printf("%d: XAB\n", i);
+      }
+    }
+    if(bestXC != INT_MAX){
+      printf("PO %s support partition: 1\n", Abc_ObjName(pPo));
+      for(int i = 0; i < Aig_ManCiNum(pAig); i++){
+        printf("%d", bestParti[i]);
+      }
+      printf("\n");
+    }
+    else printf("PO %s support partition: 0\n", Abc_ObjName(pPo));
+  }
+  return 0;
+}
+
+int Lsv_CommandOrBidec(Abc_Frame_t* pAbc, int argc, char** argv) {
+  Abc_Ntk_t* pNtk = Abc_FrameReadNtk(pAbc);
+  int c;
+  Extra_UtilGetoptReset();
+  while ((c = Extra_UtilGetopt(argc, argv, "h")) != EOF) {
+    switch (c) {
+      case 'h':
+        goto usage;
+      default:
+        goto usage;
+    }
+  }
+  if (!pNtk) {
+    Abc_Print(-1, "Empty network.\n");
+    return 1;
+  }
+  if(!Abc_NtkIsStrash(pNtk)){
+    Abc_Print(-1, "Current network is not an AIG.\n");
+    return 1;
+  }
+
+  Lsv_NtkOrBidec(pNtk);
+
+  return 0;
+
+usage:
+  Abc_Print(-2, "usage: lsv_or_bidec [-h]\n");
+  Abc_Print(-2, "\t        prints or bidecomposition result\n");
   Abc_Print(-2, "\t-h    : print the command usage\n");
   return 1;
   
