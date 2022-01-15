@@ -121,7 +121,7 @@ int Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk) {
   int i;
   vector<Abc_Obj_t *> nodeList;
   unordered_set<Abc_Obj_t *> cover;
-  vector<vector<Abc_Obj_t *>> msfcs; 
+  vector<vector<Abc_Obj_t *> > msfcs; 
   string line;
   if (Abc_ObjFanoutNum(const1) >= 1) nodeList.push_back(const1);
   Abc_NtkForEachNode(pNtk, pObj, i) {
