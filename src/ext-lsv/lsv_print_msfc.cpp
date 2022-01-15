@@ -73,7 +73,7 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk)
   // global variable
   Abc_Obj_t* PO;
   int i;
-  vector<vector<Abc_Obj_t*>> msfc_pair;
+  vector<vector<Abc_Obj_t*> > msfc_pair;
   // default each node with flag=0 && find whether has "multi-fanout"
   Abc_Obj_t* pObj;
   int node;
