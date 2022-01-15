@@ -39,7 +39,7 @@ void Lsv_NtkPrintNodes(Abc_Ntk_t* pNtk)
 
 
 std::vector<Abc_Obj_t*> cone;
-std::vector<vector<Abc_Obj_t*>> cone_list;
+std::vector<vector<Abc_Obj_t*> > cone_list;
 int MSFC_num=0;
 
 bool compare_function (Abc_Obj_t* n1, Abc_Obj_t* n2)
