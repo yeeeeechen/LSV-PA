@@ -6,19 +6,20 @@
 
 extern "C" Aig_Man_t * Abc_NtkToDar( Abc_Ntk_t * pNtk, int fExors, int fRegisters );
 
+namespace{
 static int Lsv_CommandORBiDec(Abc_Frame_t* pAbc, int argc, char** argv);
 
-void init2(Abc_Frame_t* pAbc) {
+void init(Abc_Frame_t* pAbc) {
   Cmd_CommandAdd(pAbc, "LSV", "lsv_or_bidec", Lsv_CommandORBiDec, 0);
 }
 
-void destroy2(Abc_Frame_t* pAbc) {}
+void destroy(Abc_Frame_t* pAbc) {}
 
-Abc_FrameInitializer_t frame_initializer2 = {init2, destroy2};
+Abc_FrameInitializer_t frame_initializer = {init, destroy};
 
 struct PackageRegistrationManager {
-  PackageRegistrationManager() { Abc_FrameAddInitializer(&frame_initializer2); }
-} lsvPackageRegistrationManager2;
+  PackageRegistrationManager() { Abc_FrameAddInitializer(&frame_initializer); }
+} lsvPackageRegistrationManager;
 
 void Lsv_ORBiDec(Abc_Ntk_t* pNtk) {
   Abc_Obj_t* pObj;
@@ -203,4 +204,5 @@ usage:
   Abc_Print(-2, "\t        non-trivial or bi-decomposition\n");
   Abc_Print(-2, "\t-h    : print the command usage\n");
   return 1;
+}
 }
