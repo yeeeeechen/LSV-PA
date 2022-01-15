@@ -1,0 +1,32 @@
+ABC command line: "lsv_or_bidec".
+
+PO outport[0] support patition: 0
+PO outport[1] support patition: 0
+PO outport[2] support patition: 0
+PO outport[3] support patition: 0
+PO outport[4] support patition: 0
+PO outport[5] support patition: 0
+PO outport[6] support patition: 0
+PO outport[7] support patition: 0
+PO outport[8] support patition: 0
+PO outport[9] support patition: 0
+PO outport[10] support patition: 0
+PO outport[11] support patition: 0
+PO outport[12] support patition: 0
+PO outport[13] support patition: 0
+PO outport[14] support patition: 0
+PO outport[15] support patition: 0
+PO outport[16] support patition: 0
+PO outport[17] support patition: 0
+PO outport[18] support patition: 0
+PO outport[19] support patition: 0
+PO outport[20] support patition: 0
+PO outport[21] support patition: 0
+PO outport[22] support patition: 0
+PO outport[23] support patition: 0
+PO outport[24] support patition: 0
+PO outport[25] support patition: 0
+PO outport[26] support patition: 0
+PO outport[27] support patition: 0
+PO outport[28] support patition: 0
+PO outport[29] support patition: 0

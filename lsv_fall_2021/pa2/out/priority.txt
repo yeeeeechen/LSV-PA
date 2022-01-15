@@ -1,0 +1,10 @@
+ABC command line: "lsv_or_bidec".
+
+PO P[0] support patition: 0
+PO P[1] support patition: 0
+PO P[2] support patition: 0
+PO P[3] support patition: 0
+PO P[4] support patition: 0
+PO P[5] support patition: 0
+PO P[6] support patition: 0
+PO F support patition: 0

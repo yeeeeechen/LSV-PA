@@ -1,0 +1,28 @@
+ABC command line: "lsv_or_bidec".
+
+PO sel_reg_dst[0] support patition: 0
+PO sel_reg_dst[1] support patition: 0
+PO sel_alu_opB[0] support patition: 0
+PO sel_alu_opB[1] support patition: 0
+PO alu_op[0] support patition: 0
+PO alu_op[1] support patition: 0
+PO alu_op[2] support patition: 0
+PO alu_op_ext[0] support patition: 0
+PO alu_op_ext[1] support patition: 0
+PO alu_op_ext[2] support patition: 0
+PO alu_op_ext[3] support patition: 0
+PO halt support patition: 0
+PO reg_write support patition: 0
+PO sel_pc_opA support patition: 0
+PO sel_pc_opB support patition: 0
+PO beqz support patition: 0
+PO bnez support patition: 0
+PO bgez support patition: 0
+PO bltz support patition: 0
+PO jump support patition: 0
+PO Cin support patition: 0
+PO invA support patition: 0
+PO invB support patition: 0
+PO sign support patition: 0
+PO mem_write support patition: 0
+PO sel_wb support patition: 0
