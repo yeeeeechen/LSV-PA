@@ -1,2 +1,0 @@
-ABC command line: "lsv_or_bidec".
-
