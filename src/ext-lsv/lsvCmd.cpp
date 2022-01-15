@@ -36,8 +36,8 @@ void traversal_fanin (Abc_Obj_t* pObj, std::vector <int> &temp, std::vector <str
 void Lsv_NtkPrintMsfc(Abc_Ntk_t* pNtk) {
   Abc_Obj_t* pObj;
   std::vector <int> test, store_head;
-  std::vector <std::vector <int>> result;
-  std::vector <std::vector <string>> result_name;
+  std::vector <std::vector <int> > result;
+  std::vector <std::vector <string> > result_name;
   std::vector <bool> store_traverse;
   int a, b, c, d, i, j;
   Abc_NtkForEachNode(pNtk, pObj, a) {
