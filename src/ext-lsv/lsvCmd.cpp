@@ -39,7 +39,7 @@ bool comp(vector<Abc_Obj_t*> a,vector<Abc_Obj_t*>b){
 void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk){
   Abc_Obj_t* pObj;
   int i;
-  map<int,vector<Abc_Obj_t*>> msfc;
+  map<int,vector<Abc_Obj_t*> > msfc;
 
 
   Abc_NtkForEachObj(pNtk, pObj, i){
@@ -58,7 +58,7 @@ void Lsv_NtkPrintMSFC(Abc_Ntk_t* pNtk){
 
   
   int ind=0;
-  vector<vector<Abc_Obj_t*>> sort_map;
+  vector<vector<Abc_Obj_t*> > sort_map;
   for(auto msfcnode:msfc){
     sort_map.push_back(msfcnode.second);
   }
