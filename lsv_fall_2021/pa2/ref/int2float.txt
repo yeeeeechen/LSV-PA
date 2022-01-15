@@ -1,0 +1,17 @@
+ABC command line: "lsv_pa2_checker lsv_fall_2021/pa2/out/int2float.txt".
+
+PO M[0]: correct answer.
+20100000000: valid decomposition!
+PO M[1]: correct answer.
+20010000000: valid decomposition!
+PO M[2]: correct answer.
+20001000000: valid decomposition!
+PO M[3]: correct answer.
+210000000: valid decomposition!
+PO E[0]: correct answer.
+21000000000: valid decomposition!
+PO E[1]: correct answer.
+20000100000: valid decomposition!
+PO E[2]: correct answer.
+200001000: valid decomposition!
+Pass!
