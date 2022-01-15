@@ -81,7 +81,7 @@ void Lsv_NtkPrintMsfc(Abc_Ntk_t* pNtk) {
   Abc_NtkIncrementTravId(pNtk);
   std::vector<Abc_Obj_t*> Ids, vec;
   std::unordered_map<Abc_Obj_t*, int> flag;
-  std::vector<std::vector<Abc_Obj_t*>> msfc;
+  std::vector<std::vector<Abc_Obj_t*> > msfc;
   std::vector<Abc_Obj_t*>::iterator iter;
   Abc_NtkForEachObj(pNtk, pObj, i){
     if(pObj->Type == ABC_OBJ_CONST1 && Abc_ObjFanoutNum(pObj) != 0) {
