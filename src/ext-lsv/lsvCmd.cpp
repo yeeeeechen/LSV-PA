@@ -70,7 +70,7 @@ void Lsv_ORBIDEC(Abc_Ntk_t* pNtk) {
   Abc_Obj_t* pfanin;
   Aig_Obj_t* entry;
   Abc_Ntk_t* pCone;
-  vector<vector<int>> ab_record;
+  vector<vector<int> > ab_record;
   pNtk = Abc_NtkStrash(pNtk, 1, 1, 0);
   sat_solver* sat;
   Abc_NtkForEachPo( pNtk, pPo, k )
