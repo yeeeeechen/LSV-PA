@@ -1,0 +1,18 @@
+ABC command line: "lsv_pa2_checker lsv_fall_2021/pa2/out/i2c.txt".
+
+PO po000: correct answer.
+PO po001: correct answer.
+PO po002: correct answer.
+PO po003: correct answer.
+PO po004: correct answer.
+PO po005: correct answer.
+PO po006: correct answer.
+PO po007: correct answer.
+PO po008: correct answer.
+PO po009: correct answer.
+PO po010: correct answer.
+PO po011: correct answer.
+PO po012: correct answer.
+PO po013: correct answer.
+PO po014: correct answer.
+PO po015: wrong answer.
