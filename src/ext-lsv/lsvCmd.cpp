@@ -103,18 +103,18 @@ bool compare_list(NODE* node1, NODE* node2){
 bool compare_ALLSTAR(vector<NODE*> list1, vector<NODE*> list2){
   return Abc_ObjId(list1[0]->getObj()) < Abc_ObjId(list2[0]->getObj());
 }
-void push_back_ALLSTAR(vector<vector<NODE*>> &MSFC_ALLSTAR, vector<NODE*> &msfc_list, Abc_Obj_t* pObj){
+void push_back_ALLSTAR(vector<vector<NODE*> > &MSFC_ALLSTAR, vector<NODE*> &msfc_list, Abc_Obj_t* pObj){
   msfc_list.push_back(new NODE(pObj));
   Traversal(msfc_list, pObj);
   sort(msfc_list.begin(),msfc_list.end(), compare_list);
   MSFC_ALLSTAR.push_back(msfc_list);
 }
 
-void myfile_ALLSTAR(vector<vector<NODE*>> &MSFC_ALLSTAR){
+void myfile_ALLSTAR(vector<vector<NODE*> > &MSFC_ALLSTAR){
   std::ofstream myfile;
   //myfile.open("example.txt");
   int MSFC_i = 0;
-  vector<vector<NODE*>>::iterator it;
+  vector<vector<NODE*> >::iterator it;
   //myfile << "ABC command line: \"lsv_print_msfc\"." << endl << endl;
   for(it=MSFC_ALLSTAR.begin();it!=MSFC_ALLSTAR.end();++it){
     //myfile << "MSFC " << MSFC_i <<": ";
@@ -135,7 +135,7 @@ void myfile_ALLSTAR(vector<vector<NODE*>> &MSFC_ALLSTAR){
 }
 
 void Lsv_NtkPrintMsfc(Abc_Ntk_t* pNtk) {
-  vector<vector<NODE*>> MSFC_ALLSTAR;
+  vector<vector<NODE*> > MSFC_ALLSTAR;
   Abc_Obj_t* pObj;
   int i;
   Abc_NtkForEachObj(pNtk, pObj, i) {
