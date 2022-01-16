@@ -37,9 +37,9 @@ int Lsv_CommandPrintMSFC(Abc_Frame_t* pAbc, int argc, char** argv) {
   Abc_Obj_t* pPo;
   Abc_Obj_t* pNo;
   Abc_Obj_t* pFanout;
-  unsigned fanout[objnum] {0};
-  unsigned temp[objnum] {0};
-  unsigned msfc[objnum] {1};
+  std::vector<unsigned> fanout(objnum,0);
+  std::vector<unsigned> temp(objnum,0);
+  std::vector<unsigned> msfc(objnum,1);
 
   std::vector<int> nodes;
 
