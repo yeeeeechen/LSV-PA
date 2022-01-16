@@ -6,6 +6,7 @@
 #include "sat/bsat/satSolver.h"
 #include <vector>
 
+namespace{
 static int Lsv_CommandOrBiDecomposit(Abc_Frame_t* pAbc, int argc, char** argv);
 
 void init(Abc_Frame_t* pAbc) {
@@ -156,4 +157,5 @@ int Lsv_CommandOrBiDecomposit(Abc_Frame_t* pAbci, int argc, char** argv) {
     }
   }
   return 0;
+}
 }
