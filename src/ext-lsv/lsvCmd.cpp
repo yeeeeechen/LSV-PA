@@ -3,9 +3,11 @@
 #include "base/main/mainInt.h"
 
 static int Lsv_CommandPrintNodes(Abc_Frame_t* pAbc, int argc, char** argv);
+static int Lsv_CommandLsvSimBdd( Abc_Frame_t * pAbc, int argc, char ** argv );
 
 void init(Abc_Frame_t* pAbc) {
   Cmd_CommandAdd(pAbc, "LSV", "lsv_print_nodes", Lsv_CommandPrintNodes, 0);
+  Cmd_CommandAdd(pAbc, "LSV", "lsv_sim_bdd", Lsv_CommandLsvSimBdd, 0);
 }
 
 void destroy(Abc_Frame_t* pAbc) {}
@@ -57,4 +59,63 @@ usage:
   Abc_Print(-2, "\t        prints the nodes in the network\n");
   Abc_Print(-2, "\t-h    : print the command usage\n");
   return 1;
+}
+
+
+// my commands
+
+/**Function*************************************************************
+
+  Synopsis    []
+
+  Description []
+
+  SideEffects []
+
+  SeeAlso     []
+
+***********************************************************************/
+int Lsv_CommandLsvSimBdd( Abc_Frame_t * pAbc, int argc, char ** argv )
+{
+    // get input
+    char* pInputSeq;
+    int c = 0, i = 0;
+    Abc_Obj_t* pPo;
+    Abc_Ntk_t* pNtk = Abc_FrameReadNtk(pAbc);
+    Extra_UtilGetoptReset();
+    while ( ( c = Extra_UtilGetopt( argc, argv, "h" ) ) != EOF )
+    {
+        switch ( c )
+        {
+            case 'h':
+                goto usage;
+            default:
+                goto usage;
+        }
+    }
+    if (!Abc_NtkIsBddLogic(pNtk))
+    {
+        Abc_Print( -1, "Convert to BDD first.\n");
+        return 1;
+    }
+
+    pInputSeq = argv[globalUtilOptind];
+
+    Abc_NtkForEachPo(pNtk, pPo, i) {
+        Abc_Obj_t* pRoot = Abc_ObjFanin0(pPo);
+        Abc_Print(0, "pPo: %s\npRoot: %s\n", Abc_ObjName(pPo), Abc_ObjName(pRoot));
+
+         
+        assert( Abc_NtkIsBddLogic(pRoot->pNtk) );
+        DdManager * dd = (DdManager *)pRoot->pNtk->pManFunc;  
+        DdNode* ddnode = (DdNode *)pRoot->pData;
+    }
+
+    
+    return 0;
+usage:
+    Abc_Print( -2, "usage: lsv_bdd_sim [-h] <input_pattern>\n" );
+    Abc_Print( -2, "\t        Function simulation using BDD\n" );
+    Abc_Print( -2, "\t-h    : print the command usage\n");
+    return 1;
 }
