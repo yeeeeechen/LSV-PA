@@ -79,8 +79,9 @@ int Lsv_CommandLsvSimBdd( Abc_Frame_t * pAbc, int argc, char ** argv )
 {
     // get input
     char* pInputSeq;
-    int c = 0, i = 0;
-    Abc_Obj_t* pPo;
+    int c = 0;
+    int i, j;
+    Abc_Obj_t* pPo, * pPi;
     Abc_Ntk_t* pNtk = Abc_FrameReadNtk(pAbc);
     Extra_UtilGetoptReset();
     while ( ( c = Extra_UtilGetopt( argc, argv, "h" ) ) != EOF )
@@ -98,17 +99,45 @@ int Lsv_CommandLsvSimBdd( Abc_Frame_t * pAbc, int argc, char ** argv )
         Abc_Print( -1, "Convert to BDD first.\n");
         return 1;
     }
+    if (argc > globalUtilOptind + 1){
+        Abc_Print( -1, "Wrong number of arguments.\n");
+        return 1;
+    }
 
     pInputSeq = argv[globalUtilOptind];
+    if (strlen(pInputSeq) != Abc_NtkPiNum(pNtk))
+    {
+        Abc_Print(-1, "Input size does not match.\n");
+        return 1;
+    }
 
-    Abc_NtkForEachPo(pNtk, pPo, i) {
-        Abc_Obj_t* pRoot = Abc_ObjFanin0(pPo);
-        Abc_Print(0, "pPo: %s\npRoot: %s\n", Abc_ObjName(pPo), Abc_ObjName(pRoot));
-
+    Abc_NtkForEachPo(pNtk, pPo, i) 
+    {
+        Abc_Obj_t* pPoBdd = Abc_ObjFanin0(pPo);
+        // Abc_Print(1, "pPo: %s\npPoBdd: %s\n", Abc_ObjName(pPo), Abc_ObjName(pPoBdd));
          
-        assert( Abc_NtkIsBddLogic(pRoot->pNtk) );
-        DdManager * dd = (DdManager *)pRoot->pNtk->pManFunc;  
-        DdNode* ddnode = (DdNode *)pRoot->pData;
+        assert( Abc_NtkIsBddLogic(pPoBdd->pNtk) );
+        DdManager * dd = (DdManager *)pPoBdd->pNtk->pManFunc;  
+        DdNode* poDdNode = (DdNode *)pPoBdd->pData;
+
+        DdNode* cof = poDdNode;
+        Abc_NtkForEachPi(pNtk, pPi, j)
+        {
+            assert( Abc_NtkIsBddLogic(pPi->pNtk) );
+            Abc_Print(1, "pPi: %s\n", Abc_ObjName(pPi));
+            
+            DdNode* piDdNode = (DdNode *)pPi->pData;
+            DdNode* newCof;
+            if (pInputSeq[j] == '0')
+            {
+                newCof = Cudd_Cofactor(dd, cof, Cudd_Not(piDdNode));
+            }
+            else 
+            {
+                newCof = Cudd_Cofactor(dd, cof, piDdNode);
+            }
+            cof = newCof;
+        }
     }
 
     

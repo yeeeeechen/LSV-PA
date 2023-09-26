@@ -221,7 +221,6 @@ int IoCommandRead( Abc_Frame_t * pAbc, int argc, char ** argv )
                 goto usage;
         }
     }
-    printf("argc: %d, ind: %d\n", argc, globalUtilOptind);
     if ( argc != globalUtilOptind + 1 )
         goto usage;
     // get the input file name
