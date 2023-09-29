@@ -1,6 +1,8 @@
 #include "base/abc/abc.h"
 #include "base/main/main.h"
 #include "base/main/mainInt.h"
+#include <vector>
+#include <string>
 
 static int Lsv_CommandPrintNodes(Abc_Frame_t* pAbc, int argc, char** argv);
 static int Lsv_CommandLsvSimBdd( Abc_Frame_t * pAbc, int argc, char ** argv );
@@ -81,8 +83,12 @@ int Lsv_CommandLsvSimBdd( Abc_Frame_t * pAbc, int argc, char ** argv )
     char* pInputSeq;
     int c = 0;
     int i, j;
+    int piNum;
     Abc_Obj_t* pPo, * pPi;
     Abc_Ntk_t* pNtk = Abc_FrameReadNtk(pAbc);
+    std::vector<std::string> piNames;
+    std::vector<bool> inputSeq;
+
     Extra_UtilGetoptReset();
     while ( ( c = Extra_UtilGetopt( argc, argv, "h" ) ) != EOF )
     {
@@ -99,7 +105,7 @@ int Lsv_CommandLsvSimBdd( Abc_Frame_t * pAbc, int argc, char ** argv )
         Abc_Print( -1, "Convert to BDD first.\n");
         return 1;
     }
-    if (argc > globalUtilOptind + 1){
+    if (argc != globalUtilOptind + 1){
         Abc_Print( -1, "Wrong number of arguments.\n");
         return 1;
     }
@@ -111,6 +117,38 @@ int Lsv_CommandLsvSimBdd( Abc_Frame_t * pAbc, int argc, char ** argv )
         return 1;
     }
 
+#ifdef ABC_USE_CUDD
+    // record PI names
+    piNum = Abc_NtkPiNum(pNtk);
+    Abc_NtkForEachPi(pNtk, pPi, i)
+    {
+        assert( Abc_NtkIsBddLogic(pPi->pNtk) );
+        piNames.push_back(std::string(Abc_ObjName(pPi)));
+        if (pInputSeq[i] == '0')
+        {
+            inputSeq.push_back(false);
+        }
+        else if (pInputSeq[i] == '1') 
+        {
+            inputSeq.push_back(true);
+        }
+        else {
+            Abc_Print(-1, "Only 0 or 1 allowed.\n");
+            return 1;
+        }
+    }
+
+    // for (i = 0; i < inputSeq.size(); i++){
+    //   printf("%s ", piNames[i].c_str());
+    //     if (inputSeq[i]){
+    //         printf("1\t");
+    //     }
+    //     else {
+    //         printf("0\t");
+    //     }
+    // }
+    // printf("\n");
+
     Abc_NtkForEachPo(pNtk, pPo, i) 
     {
         Abc_Obj_t* pPoBdd = Abc_ObjFanin0(pPo);
@@ -119,27 +157,44 @@ int Lsv_CommandLsvSimBdd( Abc_Frame_t * pAbc, int argc, char ** argv )
         assert( Abc_NtkIsBddLogic(pPoBdd->pNtk) );
         DdManager * dd = (DdManager *)pPoBdd->pNtk->pManFunc;  
         DdNode* poDdNode = (DdNode *)pPoBdd->pData;
+        
+        Vec_Int_t* pFaninIds = Abc_ObjFaninVec(pPoBdd);
+        // printf("POOO: %s: ", Abc_ObjName(pPo));
+        // for (j = 0; j < pFaninIds->nSize; j++){
+        //     printf("%d ", pFaninIds->pArray[j]);
+        // }
+        // printf("\n");
+
 
         DdNode* cof = poDdNode;
-        Abc_NtkForEachPi(pNtk, pPi, j)
+        for (j = 0; j < pFaninIds->nSize; j++){
+            int inputIndex = pFaninIds->pArray[j];
+            DdNode* inputDdNode = Cudd_bddIthVar(dd, j);
+
+            // printf("faninId %d:", inputIndex);
+            // Cudd_PrintDebug(dd, inputDdNode, 4, 4);
+            // printf("cof %d:", j);
+            // Cudd_PrintDebug(dd, cof, 4, 4);
+            // printf("inputindex:%d \n", inputIndex);
+            cof = inputSeq[inputIndex-1] ? Cudd_Cofactor(dd, cof, inputDdNode) : Cudd_Cofactor(dd, cof, Cudd_Not(inputDdNode));
+        }
+        
+        
+        // Cudd_PrintDebug(dd, cof, 4, 4);
+        if (cof == Cudd_ReadOne(dd))
         {
-            assert( Abc_NtkIsBddLogic(pPi->pNtk) );
-            Abc_Print(1, "pPi: %s\n", Abc_ObjName(pPi));
-            
-            DdNode* piDdNode = (DdNode *)pPi->pData;
-            DdNode* newCof;
-            if (pInputSeq[j] == '0')
-            {
-                newCof = Cudd_Cofactor(dd, cof, Cudd_Not(piDdNode));
-            }
-            else 
-            {
-                newCof = Cudd_Cofactor(dd, cof, piDdNode);
-            }
-            cof = newCof;
+            Abc_Print(1, "%s: %d\n", Abc_ObjName(pPo), 1);
+        }
+        else if (cof == Cudd_Not(Cudd_ReadOne(dd)))
+        {
+            Abc_Print(1, "%s: %d\n", Abc_ObjName(pPo), 0);
+        }
+        else {
+            Abc_Print(1, "LMAO idiot\n");
         }
     }
 
+#endif
     
     return 0;
 usage:
