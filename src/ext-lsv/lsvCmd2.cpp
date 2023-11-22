@@ -7,11 +7,11 @@
 #include <cstdlib>
 
 static int Lsv_CommandLsvSymBdd( Abc_Frame_t * pAbc, int argc, char ** argv );
-static int Lsv_CommandLsvSymSat( Abc_Frame_t * pAbc, int argc, char ** argv );
+// static int Lsv_CommandLsvSymSat( Abc_Frame_t * pAbc, int argc, char ** argv );
 
 void init(Abc_Frame_t* pAbc) {
   Cmd_CommandAdd(pAbc, "LSV", "lsv_sym_bdd", Lsv_CommandLsvSymBdd, 0);
-  Cmd_CommandAdd(pAbc, "LSV", "lsv_sym_sat", Lsv_CommandLsvSymSat, 0);
+//   Cmd_CommandAdd(pAbc, "LSV", "lsv_sym_sat", Lsv_CommandLsvSymSat, 0);
 }
 
 void destroy(Abc_Frame_t* pAbc) {}

@@ -4,7 +4,9 @@
 #include <vector>
 #include <string>
 #include <fstream>
+#include <cstdlib>
 
+// PA1
 static int Lsv_CommandPrintNodes(Abc_Frame_t* pAbc, int argc, char** argv);
 static int Lsv_CommandLsvSimBdd( Abc_Frame_t * pAbc, int argc, char ** argv );
 static int Lsv_CommandLsvSimAig( Abc_Frame_t * pAbc, int argc, char ** argv );
@@ -13,10 +15,16 @@ static void Lsv_AigCalcNodeValueRecur(Abc_Obj_t* node, std::vector<std::vector<u
 // abc_NodeIsConst has assertion error
 static inline int Lsv_IsConst(Abc_Obj_t* pNode) { return !Abc_ObjIsPi(pNode) && Abc_ObjFaninNum(pNode) == 0 && Abc_ObjFanoutNum(pNode) > 0 ;}
 
+// PA2
+static int Lsv_CommandLsvSymBdd( Abc_Frame_t * pAbc, int argc, char ** argv );
+static bool Lsv_BddFindPathRecur( DdManager* dd, int* pathTaken, int* inputPinLookup, DdNode* node);
+
+
 void init(Abc_Frame_t* pAbc) {
-  Cmd_CommandAdd(pAbc, "LSV", "lsv_print_nodes", Lsv_CommandPrintNodes, 0);
-  Cmd_CommandAdd(pAbc, "LSV", "lsv_sim_bdd", Lsv_CommandLsvSimBdd, 0);
-  Cmd_CommandAdd(pAbc, "LSV", "lsv_sim_aig", Lsv_CommandLsvSimAig, 0);
+    Cmd_CommandAdd(pAbc, "LSV", "lsv_print_nodes", Lsv_CommandPrintNodes, 0);
+    Cmd_CommandAdd(pAbc, "LSV", "lsv_sim_bdd", Lsv_CommandLsvSimBdd, 0);
+    Cmd_CommandAdd(pAbc, "LSV", "lsv_sim_aig", Lsv_CommandLsvSimAig, 0);
+    Cmd_CommandAdd(pAbc, "LSV", "lsv_sym_bdd", Lsv_CommandLsvSymBdd, 0);
 }
 
 void destroy(Abc_Frame_t* pAbc) {}
@@ -24,7 +32,7 @@ void destroy(Abc_Frame_t* pAbc) {}
 Abc_FrameInitializer_t frame_initializer = {init, destroy};
 
 struct PackageRegistrationManager {
-  PackageRegistrationManager() { Abc_FrameAddInitializer(&frame_initializer); }
+    PackageRegistrationManager() { Abc_FrameAddInitializer(&frame_initializer); }
 } lsvPackageRegistrationManager;
 
 void Lsv_NtkPrintNodes(Abc_Ntk_t* pNtk) {
@@ -71,7 +79,7 @@ usage:
 }
 
 
-// my commands
+// PA1
 
 /**Function*************************************************************
 
@@ -428,3 +436,199 @@ void Lsv_AigCalcNodeValueRecur(Abc_Obj_t* node, std::vector<std::vector<unsigned
     objInitialized[trueIndex] = true;
 }
 
+// PA2
+int Lsv_CommandLsvSymBdd(Abc_Frame_t* pAbc, int argc, char** argv)
+{
+    // get input
+    int c = 0;
+    int i;
+    int inputPin1, inputPin2;
+    int outputPin;
+    int piNum, poNum;
+    Abc_Obj_t* pPo, * pPi1, * pPi2;
+    Abc_Ntk_t* pNtk = Abc_FrameReadNtk(pAbc);
+
+    Extra_UtilGetoptReset();
+    while ( ( c = Extra_UtilGetopt( argc, argv, "h" ) ) != EOF )
+    {
+        switch ( c )
+        {
+            case 'h':
+                goto usage;
+            default:
+                goto usage;
+        }
+    }
+    if (!Abc_NtkIsBddLogic(pNtk))
+    {
+        Abc_Print( -1, "Convert to BDD first.\n");
+        return 1;
+    }
+    if (argc != globalUtilOptind + 3){
+        Abc_Print( -1, "Wrong number of arguments.\n");
+        return 1;
+    }
+
+    outputPin = strtol(argv[globalUtilOptind], NULL, 10);
+    inputPin1 = strtol(argv[globalUtilOptind+1], NULL, 10);
+    inputPin2 = strtol(argv[globalUtilOptind+2], NULL, 10);
+    piNum = Abc_NtkPiNum(pNtk);
+    poNum = Abc_NtkPoNum(pNtk);
+    if (!(outputPin < poNum && 0 <= outputPin)){
+        Abc_Print( -1, "Output pin out of range.\n");
+        return 1;
+    } 
+    
+    if (!(inputPin1 < piNum && 0 <= inputPin1) || !(inputPin2 < piNum && 0 <= inputPin2)){
+        Abc_Print( -1, "Input pin out of range.\n");
+        return 1;
+    } 
+  
+    if (inputPin1 == inputPin2){
+        Abc_Print( -1, "Input pins must be different.\n");
+        return 1;
+    } 
+
+#ifdef ABC_USE_CUDD
+    pPo = Abc_NtkPo(pNtk, outputPin);
+    pPi1 = Abc_NtkPi(pNtk, inputPin1);
+    pPi2 = Abc_NtkPi(pNtk, inputPin2);
+
+    if (Abc_NtkIsBddLogic(pPo->pNtk)){
+        Abc_Obj_t* pPoBdd = Abc_ObjFanin0(pPo);
+        DdManager* dd = (DdManager*)pPoBdd->pNtk->pManFunc;
+        DdNode* poDdNode = (DdNode*)pPoBdd->pData;
+        DdNode* pi1DdNode = Cudd_ReadOne(dd), *pi2DdNode = Cudd_ReadOne(dd);
+        int pi1BddOrder = -1, pi2BddOrder = -1;
+
+        Vec_Int_t* pFaninIds = Abc_ObjFaninVec(pPoBdd);
+
+        // find bdd nodes corresponding to inputs
+        bool pi1Found = false, pi2Found = false;
+        for (i = 0; i < pFaninIds->nSize; i++){
+            int inputIndex = pFaninIds->pArray[i] - 1;
+            if (inputIndex == inputPin1 && !pi1Found){
+                pi1Found = true;
+                pi1DdNode = Cudd_bddIthVar(dd, i);
+                pi1BddOrder = i;
+            }
+            if (inputIndex == inputPin2 && !pi2Found){
+                pi2Found = true;
+                pi2DdNode = Cudd_bddIthVar(dd, i);
+                pi2BddOrder = i;
+            }
+            if (pi1Found && pi2Found){
+                break;
+            }
+        }
+
+        // find f(1,0) and f(0,1) using cofactor
+        DdNode* cof1DdNode, *cof2DdNode, *temp;
+        DdNode* cof;
+        temp = Cudd_Cofactor(dd, poDdNode, pi1DdNode);
+        Cudd_Ref(temp);
+        cof = pi2Found ? Cudd_Not(pi2DdNode) : Cudd_ReadOne(dd);
+        cof1DdNode = Cudd_Cofactor(dd, temp, cof);
+        Cudd_RecursiveDeref(dd, temp);
+        Cudd_Ref(cof1DdNode);
+
+        cof = pi1Found ? Cudd_Not(pi1DdNode) : Cudd_ReadOne(dd);
+        temp = Cudd_Cofactor(dd, poDdNode, cof);
+        Cudd_Ref(temp);
+        cof2DdNode = Cudd_Cofactor(dd, temp, pi2DdNode);
+        Cudd_RecursiveDeref(dd, temp);
+        Cudd_Ref(cof2DdNode);
+
+        // check equivalence
+        if (cof1DdNode == cof2DdNode){
+            Abc_Print(1, "symmetric\n");
+            Cudd_RecursiveDeref(dd, cof1DdNode);
+            Cudd_RecursiveDeref(dd, cof2DdNode);
+            return 0;
+        }
+
+        // construct XOR
+        DdNode* xorDdNode = Cudd_bddXor(dd, cof1DdNode, cof2DdNode);
+        Cudd_Ref(xorDdNode);
+
+        // find counter example, valuations for PIs: 
+        // -1: pi from inputs
+        // 0: 0, 1: 1
+        // 2: dont care
+        int* piValuations = new int[piNum];
+        for (i = 0; i < piNum; i++){
+            piValuations[i] = 1;
+        }
+        piValuations[inputPin1] = -1;
+        piValuations[inputPin2] = -1;
+
+        // recursively traverse bdd, find one path to the one node
+        bool found = Lsv_BddFindPathRecur(dd, piValuations, pFaninIds->pArray, xorDdNode);
+        if (!found){
+            Abc_Print(-1, "DEAREST KARTHUS, I HOPE THIS ERROR FINDS YOU WELL.\n");
+            return 1;
+        }
+
+        Abc_Print(1, "asymmetric\n");
+        piValuations[inputPin1] = 0;
+        piValuations[inputPin2] = 1;
+        for (i = 0; i < piNum; i++){
+            Abc_Print(1, "%d", piValuations[i]);
+        }
+        Abc_Print(1,"\n");
+        piValuations[inputPin1] = 1;
+        piValuations[inputPin2] = 0;
+        for (i = 0; i < piNum; i++){
+            Abc_Print(1, "%d", piValuations[i]);
+        }
+        Abc_Print(1,"\n");
+        // TODO:
+        // CONSIDER CASE WHERE OUTPUT DOES NOT DEPEND ON INPUT VARIABLES
+        // EG. 2-BIT MULT CASE
+    }
+
+#endif
+    
+    return 0;
+usage:
+    Abc_Print( -2, "usage: lsv_sym_bdd [-h] <output pin> <input pin 1> <input pin 2>\n" );
+    Abc_Print( -2, "\t        Tests whether the output pin is symmertric wrt the two input pins.\n" );
+    Abc_Print( -2, "\t-h    : print the command usage\n");
+    return 1;
+}
+
+bool Lsv_BddFindPathRecur( DdManager* dd, int* pathTaken, int* inputPinLookup, DdNode* node){
+    DdNode *thisNode, *thenNode, *elseNode;
+    int index;
+    
+    if (node == Cudd_ReadOne(dd)){
+        // printf("ONE FOUND\n");
+        return true;
+    }
+    if (node == Cudd_Not(Cudd_ReadOne(dd))){
+        return false;
+    }
+    
+    thisNode = Cudd_Regular(node);
+    thenNode = cuddT(thisNode);
+    elseNode = cuddE(thisNode);
+    if (Cudd_IsComplement(node)) {
+        thenNode = Cudd_Not(thenNode); 
+        elseNode = Cudd_Not(elseNode);
+    }
+    index = inputPinLookup[Cudd_NodeReadIndex(thisNode)] - 1;
+
+    if (pathTaken[index] == -1){
+        printf("DEAREST KAYN, I HOPE THIS ERROR FINDS YOU WELL\n");
+    }
+
+    pathTaken[index] = 1;
+    bool thenResult = Lsv_BddFindPathRecur(dd, pathTaken, inputPinLookup, thenNode);
+    if (thenResult) return true;
+    pathTaken[index] = 0;
+    bool elseResult = Lsv_BddFindPathRecur(dd, pathTaken, inputPinLookup, elseNode);
+    if (elseResult) return true;
+
+    pathTaken[index] = 2; 
+    return false;
+}
