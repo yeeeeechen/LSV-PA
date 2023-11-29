@@ -24,8 +24,7 @@ static inline int Lsv_IsConst(Abc_Obj_t* pNode) { return !Abc_ObjIsPi(pNode) && 
 static int Lsv_CommandLsvSymBdd( Abc_Frame_t * pAbc, int argc, char ** argv );
 static bool Lsv_BddFindPathRecur( DdManager* dd, int* pathTaken, int* inputPinLookup, DdNode* node);
 static int Lsv_CommandLsvSymSat( Abc_Frame_t * pAbc, int argc, char ** argv );
-static void printAIG(Aig_Man_t* pMan);
-static void printCNF(Cnf_Dat_t* pCnf);
+static int Lsv_CommandLsvSymAll( Abc_Frame_t * pAbc, int argc, char ** argv );
 
 void init(Abc_Frame_t* pAbc) {
     Cmd_CommandAdd(pAbc, "LSV", "lsv_print_nodes", Lsv_CommandPrintNodes, 0);
@@ -33,6 +32,7 @@ void init(Abc_Frame_t* pAbc) {
     Cmd_CommandAdd(pAbc, "LSV", "lsv_sim_aig", Lsv_CommandLsvSimAig, 0);
     Cmd_CommandAdd(pAbc, "LSV", "lsv_sym_bdd", Lsv_CommandLsvSymBdd, 0);
     Cmd_CommandAdd(pAbc, "LSV", "lsv_sym_sat", Lsv_CommandLsvSymSat, 0);
+    Cmd_CommandAdd(pAbc, "LSV", "lsv_sym_all", Lsv_CommandLsvSymAll, 0);
 }
 
 void destroy(Abc_Frame_t* pAbc) {}
@@ -590,6 +590,7 @@ int Lsv_CommandLsvSymBdd(Abc_Frame_t* pAbc, int argc, char** argv)
             Abc_Print(1, "%d", piValuations[i]);
         }
         Abc_Print(1,"\n");
+        delete [] piValuations;
     }
 
 #endif
@@ -708,37 +709,78 @@ int Lsv_CommandLsvSymSat(Abc_Frame_t* pAbc, int argc, char** argv)
         Cnf_DataWriteIntoSolverInt(pSatSolver, pCnf2, 1, 0);
 
         Aig_Obj_t* pAigCi;
+        lit Lits[2];
         Aig_ManForEachCi(pAig, pAigCi, i){
-            lit clause[2];
             int cnf1Var = pCnf1->pVarNums[pAigCi->Id];
             int cnf2Var = pCnf2->pVarNums[pAigCi->Id];
             if (inputPin1 == i){
                 // constraint: assign inputPin1 0 and 1
-                clause[0] = toLitCond(cnf1Var, 0);
-                sat_solver_addclause(pSatSolver, clause, clause + 1);
-                clause[0] = toLitCond(cnf2Var, 1);
-                sat_solver_addclause(pSatSolver, clause, clause + 1);
+                Lits[0] = toLitCond(cnf1Var, 0);
+                sat_solver_addclause(pSatSolver, Lits, Lits + 1);
+                Lits[0] = toLitCond(cnf2Var, 1);
+                sat_solver_addclause(pSatSolver, Lits, Lits + 1);
             }
             else if (inputPin2 == i){
                 // constraint: assign inputPin2 1 and 0
-                clause[0] = toLitCond(cnf1Var, 1);
-                sat_solver_addclause(pSatSolver, clause, clause + 1);
-                clause[0] = toLitCond(cnf2Var, 0);
-                sat_solver_addclause(pSatSolver, clause, clause + 1);
+                Lits[0] = toLitCond(cnf1Var, 1);
+                sat_solver_addclause(pSatSolver, Lits, Lits + 1);
+                Lits[0] = toLitCond(cnf2Var, 0);
+                sat_solver_addclause(pSatSolver, Lits, Lits + 1);
             }
             else {
                 // constraint: other inputs should be equal
-                clause[0] = toLitCond(cnf1Var, 0);
-                clause[1] = toLitCond(cnf2Var, 1);
-                sat_solver_addclause(pSatSolver, clause, clause + 2);
-                clause[0] = toLitCond(cnf1Var, 1);
-                clause[1] = toLitCond(cnf2Var, 0);
-                sat_solver_addclause(pSatSolver, clause, clause + 2);
+                Lits[0] = toLitCond(cnf1Var, 0);
+                Lits[1] = toLitCond(cnf2Var, 1);
+                sat_solver_addclause(pSatSolver, Lits, Lits + 2);
+                Lits[0] = toLitCond(cnf1Var, 1);
+                Lits[1] = toLitCond(cnf2Var, 0);
+                sat_solver_addclause(pSatSolver, Lits, Lits + 2);
             }
         }
 
-        // sat_solver_add_xor( )
-        // sat_solver_solve()
+        // constraint: output must be different values (to test asymmetry)
+        int outputAigId = Aig_ManCo(pAig, 0)->Id; 
+        int cnf1Output = pCnf1->pVarNums[outputAigId];
+        int cnf2Output = pCnf2->pVarNums[outputAigId];
+        Lits[0] = toLitCond(cnf1Output, 0);
+        Lits[1] = toLitCond(cnf2Output, 0);
+        sat_solver_addclause(pSatSolver, Lits, Lits + 2);
+        Lits[0] = toLitCond(cnf1Output, 1);
+        Lits[1] = toLitCond(cnf2Output, 1);
+        sat_solver_addclause(pSatSolver, Lits, Lits + 2);
+        
+        // solve the cnf
+        lbool result = sat_solver_solve(pSatSolver, Lits, Lits, 0, 0, 0, 0);
+
+        if (result == l_True){
+            int* piValuations = new int[piNum];
+            Aig_ManForEachCi(pAig, pAigCi, i){
+                int cnf1Var = pCnf1->pVarNums[pAigCi->Id];
+                piValuations[i] = sat_solver_var_value(pSatSolver, cnf1Var);
+            }
+
+            Abc_Print(1, "asymmetric\n");
+            piValuations[inputPin1] = 0;
+            piValuations[inputPin2] = 1;
+            for (i = 0; i < piNum; i++){
+                Abc_Print(1, "%d", piValuations[i]);
+            }
+            Abc_Print(1,"\n");
+            piValuations[inputPin1] = 1;
+            piValuations[inputPin2] = 0;
+            for (i = 0; i < piNum; i++){
+                Abc_Print(1, "%d", piValuations[i]);
+            }
+            Abc_Print(1,"\n");
+            delete [] piValuations;
+        }
+        else if (result == l_False){
+            Abc_Print(1, "symmetric\n");
+        }
+        else {
+            Abc_Print(-1, "ERROR\n");
+            return 1;
+        }
 
     }
 
@@ -750,33 +792,180 @@ usage:
     return 1;
 }
 
-void printAIG(Aig_Man_t *pMan) {
-    int i;
-    Aig_Obj_t *pObj;
+int Lsv_CommandLsvSymAll( Abc_Frame_t * pAbc, int argc, char ** argv ){
+    // get input
+    int c = 0;
+    int i, j;
+    int outputPin;
+    int piNum, poNum;
+    Abc_Obj_t* pPo;
+    Abc_Ntk_t* pNtk = Abc_FrameReadNtk(pAbc);
 
-    printf("Number of Nodes: %d\n", Aig_ManObjNum(pMan));
-
-    Aig_ManForEachObj(pMan, pObj, i) {
-        // Print information for each node, e.g., pObj->Type, fanins, etc.
-        printf("Node-%d: ID = %d\n", i, pObj->Id);
-        printf("PI: %d, PO: %d\n", Aig_ObjIsCi(pObj), Aig_ObjIsCo(pObj));
-        if ( Aig_ObjFanin0(pObj) ) {
-            printf("Fanin0: ID = %d\n", Aig_ObjFanin0(pObj)->Id);
+    Extra_UtilGetoptReset();
+    while ( ( c = Extra_UtilGetopt( argc, argv, "h" ) ) != EOF )
+    {
+        switch ( c )
+        {
+            case 'h':
+                goto usage;
+            default:
+                goto usage;
         }
-        if ( Aig_ObjFanin1(pObj) ) {
-            printf("Fanin1: ID = %d\n", Aig_ObjFanin1(pObj)->Id);
-        }
-        printf("\n");
     }
-}
-
-void printCNF(Cnf_Dat_t *pCnf) {
-    printf("Number of variables: %d\n", pCnf->nVars);
-    for ( int i = 0; i < pCnf->nClauses; i++ ) {
-        int *pLit, *pStop;
-        for ( pLit = pCnf->pClauses[i], pStop = pCnf->pClauses[i + 1]; pLit < pStop; pLit++ ) {
-            printf("%d ", ( *pLit & 1 ) ? -( *pLit >> 1 ) : ( *pLit >> 1 ));
-        }
-        printf("\n");
+    if (!Abc_NtkIsStrash(pNtk))
+    {
+        Abc_Print( -1, "Convert to AIG first.\n");
+        return 1;
     }
+    if (argc != globalUtilOptind + 1){
+        Abc_Print( -1, "Wrong number of arguments.\n");
+        return 1;
+    }
+
+    outputPin = strtol(argv[globalUtilOptind], NULL, 10);
+    piNum = Abc_NtkPiNum(pNtk);
+    poNum = Abc_NtkPoNum(pNtk);
+    if (!(outputPin < poNum && 0 <= outputPin)){
+        Abc_Print( -1, "Output pin out of range.\n");
+        return 1;
+    } 
+
+    pPo = Abc_NtkPo(pNtk, outputPin);
+
+    // aig
+    if (Abc_NtkIsStrash(pPo->pNtk)){
+        Abc_Ntk_t* pConeNtk = Abc_NtkCreateCone(pNtk, Abc_ObjFanin0(pPo), Abc_ObjName(pPo), 1);
+        Aig_Man_t* pAig = Abc_NtkToDar(pConeNtk, 0, 0);
+
+        sat_solver* pSatSolver = sat_solver_new();
+        Cnf_Dat_t* pCnf1 = Cnf_Derive(pAig, 1);
+        Cnf_DataWriteIntoSolverInt(pSatSolver, pCnf1, 1, 0);
+
+        Cnf_Dat_t* pCnf2 = Cnf_Derive(pAig, 1);
+        Cnf_DataLift(pCnf2, pCnf1->nVars);
+        Cnf_DataWriteIntoSolverInt(pSatSolver, pCnf2, 1, 0);
+
+        int* controlVars = new int[piNum];
+        for (i = 0; i < piNum; i++){
+            controlVars[i] = sat_solver_addvar(pSatSolver);
+        }
+
+        Aig_Obj_t* pAigCi, *pAigCj;
+        lit Lits[4];
+        // constraint 2
+        Aig_ManForEachCi(pAig, pAigCi, i){
+            int cnf1Var = pCnf1->pVarNums[pAigCi->Id];
+            int cnf2Var = pCnf2->pVarNums[pAigCi->Id];
+            int controlVar = controlVars[i];
+            Lits[0] = toLitCond(cnf1Var, 0);
+            Lits[1] = toLitCond(cnf2Var, 1);
+            Lits[2] = toLitCond(controlVar, 1);
+            sat_solver_addclause(pSatSolver, Lits, Lits + 3);
+            Lits[0] = toLitCond(cnf1Var, 1);
+            Lits[1] = toLitCond(cnf2Var, 0);
+            Lits[2] = toLitCond(controlVar, 1);
+            sat_solver_addclause(pSatSolver, Lits, Lits + 3);
+        }
+
+        Aig_ManForEachCi(pAig, pAigCi, i){
+            for (j = i+1; j < piNum; j++){
+                pAigCj = (Aig_Obj_t*) Vec_PtrEntry(pAig->vCis, j);
+                int cnf1Vari = pCnf1->pVarNums[pAigCi->Id];
+                int cnf2Varj = pCnf2->pVarNums[pAigCj->Id];
+                int controlVari = controlVars[i];
+                int controlVarj = controlVars[j];
+                // constraint 3
+                Lits[0] = toLitCond(cnf1Vari, 0);
+                Lits[1] = toLitCond(cnf2Varj, 1);
+                Lits[2] = toLitCond(controlVari, 0);
+                Lits[3] = toLitCond(controlVarj, 0);
+                sat_solver_addclause(pSatSolver, Lits, Lits + 4);
+                Lits[0] = toLitCond(cnf1Vari, 1);
+                Lits[1] = toLitCond(cnf2Varj, 0);
+                Lits[2] = toLitCond(controlVari, 0);
+                Lits[3] = toLitCond(controlVarj, 0);
+                sat_solver_addclause(pSatSolver, Lits, Lits + 4);
+
+                int cnf1Varj = pCnf1->pVarNums[pAigCj->Id];
+                int cnf2Vari = pCnf2->pVarNums[pAigCi->Id];
+                // constraint 4
+                Lits[0] = toLitCond(cnf1Varj, 0);
+                Lits[1] = toLitCond(cnf2Vari, 1);
+                Lits[2] = toLitCond(controlVari, 0);
+                Lits[3] = toLitCond(controlVarj, 0);
+                sat_solver_addclause(pSatSolver, Lits, Lits + 4);
+                Lits[0] = toLitCond(cnf1Varj, 1);
+                Lits[1] = toLitCond(cnf2Vari, 0);
+                Lits[2] = toLitCond(controlVari, 0);
+                Lits[3] = toLitCond(controlVarj, 0);
+                sat_solver_addclause(pSatSolver, Lits, Lits + 4);
+            }
+        }
+
+        // constraint 1
+        int outputAigId = Aig_ManCo(pAig, 0)->Id; 
+        int cnf1Output = pCnf1->pVarNums[outputAigId];
+        int cnf2Output = pCnf2->pVarNums[outputAigId];
+        Lits[0] = toLitCond(cnf1Output, 0);
+        Lits[1] = toLitCond(cnf2Output, 0);
+        sat_solver_addclause(pSatSolver, Lits, Lits + 2);
+        Lits[0] = toLitCond(cnf1Output, 1);
+        Lits[1] = toLitCond(cnf2Output, 1);
+        sat_solver_addclause(pSatSolver, Lits, Lits + 2);
+        
+        // incremental sat solving 
+        int* equivGroups = new int[piNum];
+        lit* controlLits = new lit[piNum];
+        for (i = 0; i < piNum; i++){
+            equivGroups[i] = -1;
+            controlLits[i] = toLitCond(controlVars[i], 0);
+        }        
+
+        for (i = 0; i < piNum; i++){
+            if (equivGroups[i] != -1){
+                continue;
+            }
+            equivGroups[i] = i;
+            for (j = i+1; j < piNum; j++){
+                if (equivGroups[j] != -1){
+                    continue;
+                }
+                int controlVari = controlVars[i];
+                int controlVarj = controlVars[j];
+                controlLits[i] = toLitCond(controlVari, 1);
+                controlLits[j] = toLitCond(controlVarj, 1);
+
+                lbool result = sat_solver_solve(pSatSolver, controlLits, controlLits+piNum, 0, 0, 0, 0);
+                if (result == l_False){
+                    // symmetric
+                    equivGroups[j] = i;
+                }
+                else if (result == l_Undef){
+                    Abc_Print(-1, "ERROR\n");
+                    return 1;
+                }
+                controlLits[i] = toLitCond(controlVari,0);
+                controlLits[j] = toLitCond(controlVarj,0);
+            }
+        }
+
+        for (i = 0; i < piNum; i++){
+            for (j = i+1; j < piNum; j++){
+                if (equivGroups[i] == equivGroups[j]){
+                    Abc_Print(1, "%d %d\n", i, j);
+                }
+            }
+        }
+
+        delete[] controlVars;
+        delete[] controlLits;
+        delete[] equivGroups;
+    }
+
+    return 0;
+usage:
+    Abc_Print( -2, "usage: lsv_sym_all [-h] <output pin>\n" );
+    Abc_Print( -2, "\t        Outputs which input pin pairs are symmetric wrt the output pin.\n" );
+    Abc_Print( -2, "\t-h    : print the command usage\n");
+    return 1;
 }
