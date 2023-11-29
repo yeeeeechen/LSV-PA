@@ -1,10 +1,15 @@
 #include "base/abc/abc.h"
 #include "base/main/main.h"
 #include "base/main/mainInt.h"
+#include "sat/cnf/cnf.h"
 #include <vector>
 #include <string>
 #include <fstream>
 #include <cstdlib>
+
+extern "C"{
+    Aig_Man_t* Abc_NtkToDar( Abc_Ntk_t * pNtk, int fExors, int fRegisters );
+}
 
 // PA1
 static int Lsv_CommandPrintNodes(Abc_Frame_t* pAbc, int argc, char** argv);
@@ -18,13 +23,16 @@ static inline int Lsv_IsConst(Abc_Obj_t* pNode) { return !Abc_ObjIsPi(pNode) && 
 // PA2
 static int Lsv_CommandLsvSymBdd( Abc_Frame_t * pAbc, int argc, char ** argv );
 static bool Lsv_BddFindPathRecur( DdManager* dd, int* pathTaken, int* inputPinLookup, DdNode* node);
-
+static int Lsv_CommandLsvSymSat( Abc_Frame_t * pAbc, int argc, char ** argv );
+static void printAIG(Aig_Man_t* pMan);
+static void printCNF(Cnf_Dat_t* pCnf);
 
 void init(Abc_Frame_t* pAbc) {
     Cmd_CommandAdd(pAbc, "LSV", "lsv_print_nodes", Lsv_CommandPrintNodes, 0);
     Cmd_CommandAdd(pAbc, "LSV", "lsv_sim_bdd", Lsv_CommandLsvSimBdd, 0);
     Cmd_CommandAdd(pAbc, "LSV", "lsv_sim_aig", Lsv_CommandLsvSimAig, 0);
     Cmd_CommandAdd(pAbc, "LSV", "lsv_sym_bdd", Lsv_CommandLsvSymBdd, 0);
+    Cmd_CommandAdd(pAbc, "LSV", "lsv_sym_sat", Lsv_CommandLsvSymSat, 0);
 }
 
 void destroy(Abc_Frame_t* pAbc) {}
@@ -582,9 +590,6 @@ int Lsv_CommandLsvSymBdd(Abc_Frame_t* pAbc, int argc, char** argv)
             Abc_Print(1, "%d", piValuations[i]);
         }
         Abc_Print(1,"\n");
-        // TODO:
-        // CONSIDER CASE WHERE OUTPUT DOES NOT DEPEND ON INPUT VARIABLES
-        // EG. 2-BIT MULT CASE
     }
 
 #endif
@@ -631,4 +636,147 @@ bool Lsv_BddFindPathRecur( DdManager* dd, int* pathTaken, int* inputPinLookup, D
 
     pathTaken[index] = 2; 
     return false;
+}
+
+int Lsv_CommandLsvSymSat(Abc_Frame_t* pAbc, int argc, char** argv)
+{
+    // get input
+    int c = 0;
+    int i;
+    int inputPin1, inputPin2;
+    int outputPin;
+    int piNum, poNum;
+    Abc_Obj_t* pPo, * pPi1, * pPi2;
+    Abc_Ntk_t* pNtk = Abc_FrameReadNtk(pAbc);
+
+    Extra_UtilGetoptReset();
+    while ( ( c = Extra_UtilGetopt( argc, argv, "h" ) ) != EOF )
+    {
+        switch ( c )
+        {
+            case 'h':
+                goto usage;
+            default:
+                goto usage;
+        }
+    }
+    if (!Abc_NtkIsStrash(pNtk))
+    {
+        Abc_Print( -1, "Convert to AIG first.\n");
+        return 1;
+    }
+    if (argc != globalUtilOptind + 3){
+        Abc_Print( -1, "Wrong number of arguments.\n");
+        return 1;
+    }
+
+    outputPin = strtol(argv[globalUtilOptind], NULL, 10);
+    inputPin1 = strtol(argv[globalUtilOptind+1], NULL, 10);
+    inputPin2 = strtol(argv[globalUtilOptind+2], NULL, 10);
+    piNum = Abc_NtkPiNum(pNtk);
+    poNum = Abc_NtkPoNum(pNtk);
+    if (!(outputPin < poNum && 0 <= outputPin)){
+        Abc_Print( -1, "Output pin out of range.\n");
+        return 1;
+    } 
+    
+    if (!(inputPin1 < piNum && 0 <= inputPin1) || !(inputPin2 < piNum && 0 <= inputPin2)){
+        Abc_Print( -1, "Input pin out of range.\n");
+        return 1;
+    } 
+  
+    if (inputPin1 == inputPin2){
+        Abc_Print( -1, "Input pins must be different.\n");
+        return 1;
+    } 
+
+    pPo = Abc_NtkPo(pNtk, outputPin);
+    pPi1 = Abc_NtkPi(pNtk, inputPin1);
+    pPi2 = Abc_NtkPi(pNtk, inputPin2);
+
+    // aig
+    if (Abc_NtkIsStrash(pPo->pNtk)){
+        Abc_Ntk_t* pConeNtk = Abc_NtkCreateCone(pNtk, Abc_ObjFanin0(pPo), Abc_ObjName(pPo), 1);
+        Aig_Man_t* pAig = Abc_NtkToDar(pConeNtk, 0, 0);
+
+        sat_solver* pSatSolver = sat_solver_new();
+        Cnf_Dat_t* pCnf1 = Cnf_Derive(pAig, 1);
+        Cnf_DataWriteIntoSolverInt(pSatSolver, pCnf1, 1, 0);
+
+        Cnf_Dat_t* pCnf2 = Cnf_Derive(pAig, 1);
+        Cnf_DataLift(pCnf2, pCnf1->nVars);
+        Cnf_DataWriteIntoSolverInt(pSatSolver, pCnf2, 1, 0);
+
+        Aig_Obj_t* pAigCi;
+        Aig_ManForEachCi(pAig, pAigCi, i){
+            lit clause[2];
+            int cnf1Var = pCnf1->pVarNums[pAigCi->Id];
+            int cnf2Var = pCnf2->pVarNums[pAigCi->Id];
+            if (inputPin1 == i){
+                // constraint: assign inputPin1 0 and 1
+                clause[0] = toLitCond(cnf1Var, 0);
+                sat_solver_addclause(pSatSolver, clause, clause + 1);
+                clause[0] = toLitCond(cnf2Var, 1);
+                sat_solver_addclause(pSatSolver, clause, clause + 1);
+            }
+            else if (inputPin2 == i){
+                // constraint: assign inputPin2 1 and 0
+                clause[0] = toLitCond(cnf1Var, 1);
+                sat_solver_addclause(pSatSolver, clause, clause + 1);
+                clause[0] = toLitCond(cnf2Var, 0);
+                sat_solver_addclause(pSatSolver, clause, clause + 1);
+            }
+            else {
+                // constraint: other inputs should be equal
+                clause[0] = toLitCond(cnf1Var, 0);
+                clause[1] = toLitCond(cnf2Var, 1);
+                sat_solver_addclause(pSatSolver, clause, clause + 2);
+                clause[0] = toLitCond(cnf1Var, 1);
+                clause[1] = toLitCond(cnf2Var, 0);
+                sat_solver_addclause(pSatSolver, clause, clause + 2);
+            }
+        }
+
+        // sat_solver_add_xor( )
+        // sat_solver_solve()
+
+    }
+
+    return 0;
+usage:
+    Abc_Print( -2, "usage: lsv_sym_sat [-h] <output pin> <input pin 1> <input pin 2>\n" );
+    Abc_Print( -2, "\t        Tests whether the output pin is symmertric wrt the two input pins.\n" );
+    Abc_Print( -2, "\t-h    : print the command usage\n");
+    return 1;
+}
+
+void printAIG(Aig_Man_t *pMan) {
+    int i;
+    Aig_Obj_t *pObj;
+
+    printf("Number of Nodes: %d\n", Aig_ManObjNum(pMan));
+
+    Aig_ManForEachObj(pMan, pObj, i) {
+        // Print information for each node, e.g., pObj->Type, fanins, etc.
+        printf("Node-%d: ID = %d\n", i, pObj->Id);
+        printf("PI: %d, PO: %d\n", Aig_ObjIsCi(pObj), Aig_ObjIsCo(pObj));
+        if ( Aig_ObjFanin0(pObj) ) {
+            printf("Fanin0: ID = %d\n", Aig_ObjFanin0(pObj)->Id);
+        }
+        if ( Aig_ObjFanin1(pObj) ) {
+            printf("Fanin1: ID = %d\n", Aig_ObjFanin1(pObj)->Id);
+        }
+        printf("\n");
+    }
+}
+
+void printCNF(Cnf_Dat_t *pCnf) {
+    printf("Number of variables: %d\n", pCnf->nVars);
+    for ( int i = 0; i < pCnf->nClauses; i++ ) {
+        int *pLit, *pStop;
+        for ( pLit = pCnf->pClauses[i], pStop = pCnf->pClauses[i + 1]; pLit < pStop; pLit++ ) {
+            printf("%d ", ( *pLit & 1 ) ? -( *pLit >> 1 ) : ( *pLit >> 1 ));
+        }
+        printf("\n");
+    }
 }
