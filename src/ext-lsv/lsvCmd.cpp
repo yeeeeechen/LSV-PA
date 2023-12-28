@@ -26,6 +26,11 @@ static bool Lsv_BddFindPathRecur( DdManager* dd, int* pathTaken, int* inputPinLo
 static int Lsv_CommandLsvSymSat( Abc_Frame_t * pAbc, int argc, char ** argv );
 static int Lsv_CommandLsvSymAll( Abc_Frame_t * pAbc, int argc, char ** argv );
 
+// fuck you
+static int Lsv_CommandSimulateCUDA(Abc_Frame_t *pAbc, int argc, char **argv);
+static void Lsv_ClusterAig(Abc_Ntk_t *pAbc, int argc, char **argv);
+
+
 void init(Abc_Frame_t* pAbc) {
     Cmd_CommandAdd(pAbc, "LSV", "lsv_print_nodes", Lsv_CommandPrintNodes, 0);
     Cmd_CommandAdd(pAbc, "LSV", "lsv_sim_bdd", Lsv_CommandLsvSimBdd, 0);
@@ -33,6 +38,7 @@ void init(Abc_Frame_t* pAbc) {
     Cmd_CommandAdd(pAbc, "LSV", "lsv_sym_bdd", Lsv_CommandLsvSymBdd, 0);
     Cmd_CommandAdd(pAbc, "LSV", "lsv_sym_sat", Lsv_CommandLsvSymSat, 0);
     Cmd_CommandAdd(pAbc, "LSV", "lsv_sym_all", Lsv_CommandLsvSymAll, 0);
+    Cmd_CommandAdd(pAbc, "LSV", "lsv_sim_cuda", Lsv_CommandSimulateCUDA, 0);
 }
 
 void destroy(Abc_Frame_t* pAbc) {}
@@ -48,14 +54,17 @@ void Lsv_NtkPrintNodes(Abc_Ntk_t* pNtk) {
   int i;
   Abc_NtkForEachNode(pNtk, pObj, i) {
     printf("Object Id = %d, name = %s\n", Abc_ObjId(pObj), Abc_ObjName(pObj));
-    Abc_Obj_t* pFanin;
+    printf("Level: %d\n", pObj->Level);
+    printf("Address: %p\n", pObj);
+    Abc_Obj_t* pFanin, *pFanout;
     int j;
     Abc_ObjForEachFanin(pObj, pFanin, j) {
-      printf("  Fanin-%d: Id = %d, name = %s\n", j, Abc_ObjId(pFanin),
-             Abc_ObjName(pFanin));
+      printf("  Fanin-%d: Id = %d, name = %s, comp = %d\n", j, Abc_ObjId(pFanin),
+             Abc_ObjName(pFanin), Abc_ObjFaninC(pObj, j));
     }
-    if (Abc_NtkHasSop(pNtk)) {
-      printf("The SOP of this node:\n%s", (char*)pObj->pData);
+    Abc_ObjForEachFanout(pObj, pFanout, j) {
+      printf("  Fanout-%d: Id = %d, name = %s\n", j, Abc_ObjId(pFanout),
+             Abc_ObjName(pFanout));
     }
   }
 }
@@ -969,3 +978,49 @@ usage:
     Abc_Print( -2, "\t-h    : print the command usage\n");
     return 1;
 }
+
+int Lsv_CommandSimulateCUDA(Abc_Frame_t *pAbc, int argc, char **argv) {
+    Abc_Ntk_t *pNtk = Abc_FrameReadNtk(pAbc);
+    int c;
+    Extra_UtilGetoptReset();
+    while ( ( c = Extra_UtilGetopt(argc, argv, "h") ) != EOF ) {
+        switch ( c ) {
+        case 'h':
+            goto usage;
+        default:
+            goto usage;
+        }
+    }
+
+    if ( !pNtk ) {
+        Abc_Print(-1, "Empty network.\n");
+        return 1;
+    }
+    if (!Abc_NtkIsStrash(pNtk))
+    {
+        Abc_Print( -1, "Convert to AIG first.\n");
+        return 1;
+    }
+
+    Lsv_ClusterAig(pNtk, argc, argv);
+
+    
+    return 0;
+
+usage:
+    Abc_Print(-2, "usage: I don't know how to use it too.\n");
+    return 1;
+}
+
+void Lsv_ClusterAig(Abc_Ntk_t* pNtk, int argc, char **argv){
+    std::vector<Aig_Man_t*> allPoAigMans;
+    Abc_Obj_t* pPo;
+    int i;
+    Abc_NtkForEachCo(pNtk, pPo, i){
+        Abc_Ntk_t* pConeNtk = Abc_NtkCreateCone(pNtk, Abc_ObjFanin0(pPo), Abc_ObjName(pPo), 1);
+        Aig_Man_t* pAig = Abc_NtkToDar(pConeNtk, 0, 0);
+        printf("FUCK YOU %d\n\n", i);
+        allPoAigMans.push_back(pAig);
+        Lsv_NtkPrintNodes(pConeNtk);
+    }
+}   
